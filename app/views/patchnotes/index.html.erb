@@ -1,0 +1,281 @@
+<% content_for :header_tags do %>
+    <%= stylesheet_link_tag 'context_menu' %>
+    <%= javascript_include_tag 'context_menu' %>
+    <%= stylesheet_link_tag 'scm' %>
+    <%= stylesheet_link_tag 'wiki' %>
+<% end %>
+
+<style>
+    .version-box {
+        border: 1px solid #999;
+        padding: 10px;
+        margin: 10px;
+        border-radius: 8px;
+    }
+    .note-item {
+        margin-bottom: 10px;
+    }
+    .note-item-title {
+        font-size: 1.2em;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .note-item-content {
+        opacity: 0.6;
+    }
+
+    /* 컨텐츠 탭 스타일 수정 */
+    .content-tabs {
+        margin: 20px 0;
+    }
+
+    .content-tabs ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        border-bottom: 1px solid #ccc;
+        height: auto;  /* 기존 Redmine 탭의 height 설정 제거 */
+    }
+
+    .content-tabs li {
+        display: inline-block;
+        margin-right: 5px;
+        float: none;  /* 기존 Redmine 탭의 float 제거 */
+    }
+
+    .content-tabs a {
+        display: inline-block;
+        padding: 8px 15px;
+        text-decoration: none;
+        border: 1px solid #ccc;
+        border-radius: 3px 3px 0 0;
+        background-color: #f6f6f6;
+        margin-bottom: -1px;
+    }
+
+    .content-tabs a.active {
+        background: #fff;
+        border-bottom-color: #fff;
+        color: #555;
+    }
+
+    /* 탭 컨텐츠 스타일 */
+    .tab-content > div {
+        display: none;
+    }
+    
+    .tab-content > div.active {
+        display: block;
+    }
+</style>
+
+<div class="tabs" style="height: 48px;">
+    <ul>
+        <% @versions.each do |version| %>
+            <li><%= link_to version.name.to_s, '?version_id=' + version.id.to_s, class: @selected_version.id == version.id ? 'selected' : '' %></li>
+        <% end %>
+    </ul>
+</div>
+
+<div class="content-tabs">
+    <ul>
+        <li><a href="?version_id=<%= @selected_version.id %>&tab=1" class="tab-link <%= params[:tab].nil? || params[:tab] == '1' ? 'active' : '' %>" data-tab="inner-tab-1">패치노트 (<%= @notes.count %>)</a></li>
+        <li><a href="?version_id=<%= @selected_version.id %>&tab=2" class="tab-link <%= params[:tab] == '2' ? 'active' : '' %>" data-tab="inner-tab-2">패치노트 작성 완료 일감 (<%= @issues_patch_note_complete.count %>)</a></li>
+        <li><a href="?version_id=<%= @selected_version.id %>&tab=3" class="tab-link <%= params[:tab] == '3' ? 'active' : '' %>" data-tab="inner-tab-3">패치노트 작성 예외 일감 (<%= @no_patch_note_issues.count %>)</a></li>
+        <li><a href="?version_id=<%= @selected_version.id %>&tab=4" class="tab-link <%= params[:tab] == '4' ? 'active' : '' %>" data-tab="inner-tab-4">패치노트 누락 일감 (<%= @issues_need_patch_notes.count %>)</a></li>
+        <li><a href="?version_id=<%= @selected_version.id %>&tab=5" class="tab-link <%= params[:tab] == '5' ? 'active' : '' %>" data-tab="inner-tab-5">패치노트 기재 없이 완료 처리된 일감 (<%= @issues_complete_without_patch_notes.count %>)</a></li>
+    </ul>
+</div>
+
+<%
+    def render_issues_list(issues, project)
+        query = IssueQuery.new(name: '패치노트 누락 일감')
+        query.project = project
+        query.column_names = [:id, :tracker,:status, :priority, :subject, :assigned_to, :done_ratio, :due_date]
+        query.sort_criteria = params[:sort] if params[:sort].present?
+        
+        render partial: 'issues/list', 
+            locals: { 
+                query: query, 
+                issues: issues, 
+                context_menu: true
+            }
+    end
+%>
+
+<div class="tab-content">
+    <% if params[:tab].nil? || params[:tab] == '1' %>
+
+        <div class="inner-tab-1 active">
+
+        <% @notes_by_part.each do |part, notes| %>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">            
+                <h3 style="margin: 0;">패치노트 #<%= part %></h3>
+                <a href="#" onclick="copyPatchNotes(<%= part %>); return false;" class="icon icon-copy button">
+                    클립보드에 복사하기
+                </a>
+            </div>
+            <div class="version-box">
+                <ul class="patch-notes-list-<%= part %>" id="patch-notes-list-<%= part %>">
+                    <% notes.each do |note| %>
+                        <%
+                            worker_name = if note[:issue].worker_id.present?
+                                User.find(note[:issue].worker_id).name
+                            else
+                                note[:issue].assigned_to.name
+                            end
+                        %>
+                        <li class="note-item">
+                            <strong class="note-item-title">
+                                <%= note[:issue].subject %> <%= link_to "#" + note[:issue].id.to_s, issue_path(note[:issue]) %>
+                            </strong> <span style="font-size: 0.8em; color: #666;">(담당자: <%= worker_name.gsub(/ /, '') %>)</span>
+                            <div class="note-item-content wiki">
+                                <%= textilizable(note[:notes], :object => note[:issue]) %>
+                            </div>
+                        </li>
+                    <% end %>
+                </ul>
+            </div>
+
+        <% end %>
+
+        </div>
+    <% end %>
+
+    <% if params[:tab] == '2' %>
+        <div class="inner-tab-2 active">
+            <h3>패치노트 작성 완료 일감</h3>
+            <div class="version-box">
+                <%= render_issues_list(@issues_patch_note_complete, @project) %>
+            </div>
+        </div>
+    <% end %>
+
+    <% if params[:tab] == '3' %>
+        <div class="inner-tab-3 active">
+            <h3>패치노트 작성 예외 일감</h3>
+            <div class="version-box">
+                <%= render_issues_list(@no_patch_note_issues, @project) %>
+            </div>
+        </div>
+    <% end %>
+
+    <% if params[:tab] == '4' %>
+        <div class="inner-tab-4 active">
+            <h3>패치노트 누락 일감</h3>
+            <div class="version-box">
+                <%= render_issues_list(@issues_need_patch_notes, @project) %>
+            </div>
+        </div>
+    <% end %>
+
+    <% if params[:tab] == '5' %>
+        <div class="inner-tab-5 active">
+            <h3>패치노트 기재 없이 완료 처리된 일감</h3>
+            <div class="version-box">
+                <%= render_issues_list(@issues_complete_without_patch_notes, @project) %>
+            </div>
+        </div>
+    <% end %>
+</div>
+
+<%= context_menu %>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tabLinks = document.querySelectorAll('.tab-link');
+    
+    tabLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            // 탭 클릭 시 페이지 이동이 되므로 이벤트 처리는 제거
+            // e.preventDefault();
+            // ... 기존 탭 전환 코드 제거 ...
+        });
+    });
+});
+
+function copyPatchNotes( part = 1) {
+    const patchNotesList = document.getElementById('patch-notes-list-' + part);
+    const items = patchNotesList.getElementsByClassName('note-item');
+    
+    // 임시 div 생성
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'fixed';
+    tempDiv.style.opacity = '0';
+    tempDiv.style.pointerEvents = 'none';
+    
+    // 이미지를 데이터 URL로 변환하는 함수
+    async function convertImageToDataURL(imgUrl) {
+        try {
+            const response = await fetch(imgUrl);
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        } catch (err) {
+            console.error('이미지 변환 실패:', err);
+            return imgUrl;
+        }
+    }
+
+    // 각 항목의 HTML을 복사
+    Promise.all(Array.from(items).map(async item => {
+        const title = item.querySelector('.note-item-title').innerHTML;
+        let content = item.querySelector('.note-item-content').innerHTML;
+        
+        // 이미지 URL을 절대 경로로 변환하고 데이터 URL로 변환
+        const imgRegex = /<img[^>]+src="([^"]+)"[^>]*>/g;
+        const imgPromises = [];
+        content = content.replace(imgRegex, (match, src) => {
+            const absoluteSrc = src.startsWith('http') ? src : `${window.location.origin}${src}`;
+            imgPromises.push(
+                convertImageToDataURL(absoluteSrc).then(dataUrl => {
+                    return match.replace(src, dataUrl);
+                })
+            );
+            return match;
+        });
+
+        // 모든 이미지 변환이 완료될 때까지 대기
+        if (imgPromises.length > 0) {
+            const results = await Promise.all(imgPromises);
+            results.forEach((replacedImg, index) => {
+                content = content.replace(imgRegex, (match, src) => {
+                    if (index === 0) return replacedImg;
+                    return match;
+                });
+            });
+        }
+        
+        return `<div class="note-item">
+            <strong class="note-item-title">${title}</strong>
+            <div class="note-item-content">${content}</div>
+        </div>`;
+    })).then(htmlContents => {
+        tempDiv.innerHTML = htmlContents.join('');
+        document.body.appendChild(tempDiv);
+        
+        // HTML 선택 및 복사
+        const range = document.createRange();
+        range.selectNode(tempDiv);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        try {
+            document.execCommand('copy');
+            alert('패치노트가 클립보드에 복사되었습니다.');
+        } catch (err) {
+            console.error('클립보드 복사 실패:', err);
+            alert('클립보드 복사에 실패했습니다.');
+        }
+        
+        // 임시 요소 제거
+        selection.removeAllRanges();
+        document.body.removeChild(tempDiv);
+    });
+}
+</script>
