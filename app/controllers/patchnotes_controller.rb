@@ -30,7 +30,8 @@ class PatchnotesController < ApplicationController
         
         # 오늘 이후의 가장 빠른 버전을 기본값으로 설정
         @selected_version = if params[:version_id]
-            @versions.find { |v| v.id == params[:version_id].to_i }
+            version = @versions.find { |v| v.id == params[:version_id].to_i }
+            version.nil? ? Version.find(params[:version_id].to_i) : version
         else
             @versions.find { |v| v.effective_date >= Date.today } || @versions.first
         end
@@ -136,7 +137,7 @@ class PatchnotesController < ApplicationController
       end
     
       def authorize
-        raise Unauthorized unless User.current.allowed_to?(:view_sc_report, @project)
+        raise Unauthorized unless User.current.allowed_to?(:view_patchnotes, @project)
       end
 
 

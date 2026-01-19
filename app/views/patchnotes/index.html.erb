@@ -121,7 +121,8 @@
                     <% notes.each do |note| %>
                         <%
                             worker_name = if note[:issue].worker_id.present?
-                                User.find(note[:issue].worker_id).name
+                                u = User.where(id: note[:issue].worker_id).first
+                                u.present? ? u.name : note[:issue].assigned_to.name
                             else
                                 note[:issue].assigned_to.name
                             end
