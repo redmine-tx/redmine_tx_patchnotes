@@ -106,6 +106,33 @@ class PatchnotesController < ApplicationController
         issues_need_patch_notes = issues.select { |issue| !noted_issue_ids.include?(issue.id) && !config_complete_status.include?(issue.status_id) }
         issues_complete_without_patch_notes = issues.select { |issue| config_complete_status.include?(issue.status_id) && !noted_issue_ids.include?(issue.id) }
         
+        # 내부용 패치노트 커스텀 필드 확인
+        internal_custom_field_id = Setting[:plugin_redmine_tx_patchnotes][:internal_note_custom_field].to_s
+
+        # 공개용과 내부용 패치노트 분류
+        if internal_custom_field_id.present?
+            public_notes = []
+            internal_notes = []
+
+            notes.each do |note|
+                custom_value = note[:issue].custom_field_value(internal_custom_field_id)
+                is_internal = custom_value == '1' || custom_value == true
+
+                if is_internal
+                    internal_notes << note
+                else
+                    public_notes << note
+                end
+            end
+
+            @public_notes = public_notes
+            @internal_notes = internal_notes
+        else
+            # 설정되지 않은 경우 모든 패치노트를 공개용으로 처리
+            @public_notes = notes
+            @internal_notes = []
+        end
+
         @notes = notes
         @issues = issues
         @issues_patch_note_complete = issues_patch_note_complete
@@ -114,15 +141,28 @@ class PatchnotesController < ApplicationController
 
         tracker_order = Setting[:plugin_redmine_tx_patchnotes][:tracker_order].to_s.tr('[]" ','').split(',').map(&:to_i)
 
-        @notes_by_part = @notes.group_by { |note| note[:part] }.sort_by { |part, notes| part }
-        @notes_by_part.each do |part, notes|
-            notes.sort_by! { |note| 
+        # 공개용 패치노트를 파트별로 그룹화
+        @public_notes_by_part = @public_notes.group_by { |note| note[:part] }.sort_by { |part, notes| part }
+        @public_notes_by_part.each do |part, notes|
+            notes.sort_by! { |note|
                 tracker_id = note[:issue].tracker_id
                 order_index = tracker_order.index(tracker_id)
-                # tracker_order에 없는 tracker는 맨 뒤로 보내기
                 order_index.nil? ? 999 : order_index
             }
         end
+
+        # 내부용 패치노트를 파트별로 그룹화
+        @internal_notes_by_part = @internal_notes.group_by { |note| note[:part] }.sort_by { |part, notes| part }
+        @internal_notes_by_part.each do |part, notes|
+            notes.sort_by! { |note|
+                tracker_id = note[:issue].tracker_id
+                order_index = tracker_order.index(tracker_id)
+                order_index.nil? ? 999 : order_index
+            }
+        end
+
+        # 하위 호환성을 위해 기존 변수도 유지
+        @notes_by_part = @public_notes_by_part
 
 
       end

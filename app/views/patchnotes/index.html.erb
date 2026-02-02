@@ -79,7 +79,7 @@
 
 <div class="content-tabs">
     <ul>
-        <li><a href="?version_id=<%= @selected_version.id %>&tab=1" class="tab-link <%= params[:tab].nil? || params[:tab] == '1' ? 'active' : '' %>" data-tab="inner-tab-1">패치노트 (<%= @notes.count %>)</a></li>
+        <li><a href="?version_id=<%= @selected_version.id %>&tab=1" class="tab-link <%= params[:tab].nil? || params[:tab] == '1' ? 'active' : '' %>" data-tab="inner-tab-1">패치노트 (공개: <%= @public_notes.count %> / 내부: <%= @internal_notes.count %>)</a></li>
         <li><a href="?version_id=<%= @selected_version.id %>&tab=2" class="tab-link <%= params[:tab] == '2' ? 'active' : '' %>" data-tab="inner-tab-2">패치노트 작성 완료 일감 (<%= @issues_patch_note_complete.count %>)</a></li>
         <li><a href="?version_id=<%= @selected_version.id %>&tab=3" class="tab-link <%= params[:tab] == '3' ? 'active' : '' %>" data-tab="inner-tab-3">패치노트 작성 예외 일감 (<%= @no_patch_note_issues.count %>)</a></li>
         <li><a href="?version_id=<%= @selected_version.id %>&tab=4" class="tab-link <%= params[:tab] == '4' ? 'active' : '' %>" data-tab="inner-tab-4">패치노트 누락 일감 (<%= @issues_need_patch_notes.count %>)</a></li>
@@ -108,37 +108,87 @@
 
         <div class="inner-tab-1 active">
 
-        <% @notes_by_part.each do |part, notes| %>
+        <!-- 공개용 패치노트 -->
+        <% if @public_notes.any? %>
+            <h2 style="margin-top: 20px; margin-bottom: 10px; color: #169; border-bottom: 2px solid #169; padding-bottom: 5px;">
+                📢 공개용 패치노트
+            </h2>
 
-            <div style="display: flex; justify-content: space-between; align-items: center;">            
-                <h3 style="margin: 0;">패치노트 #<%= part %></h3>
-                <a href="#" onclick="copyPatchNotes(<%= part %>); return false;" class="icon icon-copy button">
-                    클립보드에 복사하기
-                </a>
-            </div>
-            <div class="version-box">
-                <ul class="patch-notes-list-<%= part %>" id="patch-notes-list-<%= part %>">
-                    <% notes.each do |note| %>
-                        <%
-                            worker_name = if note[:issue].worker_id.present?
-                                u = User.where(id: note[:issue].worker_id).first
-                                u.present? ? u.name : note[:issue].assigned_to.name
-                            else
-                                note[:issue].assigned_to.name
-                            end
-                        %>
-                        <li class="note-item">
-                            <strong class="note-item-title">
-                                <%= note[:issue].subject %> <%= link_to "#" + note[:issue].id.to_s, issue_path(note[:issue]) %>
-                            </strong> <span style="font-size: 0.8em; color: #666;">(담당자: <%= worker_name.gsub(/ /, '') %>)</span>
-                            <div class="note-item-content wiki">
-                                <%= textilizable(note[:notes], :object => note[:issue]) %>
-                            </div>
-                        </li>
-                    <% end %>
-                </ul>
-            </div>
+            <% @public_notes_by_part.each do |part, notes| %>
 
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0;">패치노트 #<%= part %></h3>
+                    <a href="#" onclick="copyPatchNotes(<%= part %>, 'public'); return false;" class="icon icon-copy button">
+                        클립보드에 복사하기
+                    </a>
+                </div>
+                <div class="version-box">
+                    <ul class="patch-notes-list-public-<%= part %>" id="patch-notes-list-public-<%= part %>">
+                        <% notes.each do |note| %>
+                            <%
+                                worker_name = if note[:issue].worker_id.present?
+                                    u = User.where(id: note[:issue].worker_id).first
+                                    u.present? ? u.name : note[:issue].assigned_to.name
+                                else
+                                    note[:issue].assigned_to.name
+                                end
+                            %>
+                            <li class="note-item">
+                                <strong class="note-item-title">
+                                    <%= note[:issue].subject %> <%= link_to "#" + note[:issue].id.to_s, issue_path(note[:issue]) %>
+                                </strong> <span style="font-size: 0.8em; color: #666;">(담당자: <%= worker_name.gsub(/ /, '') %>)</span>
+                                <div class="note-item-content wiki">
+                                    <%= textilizable(note[:notes], :object => note[:issue]) %>
+                                </div>
+                            </li>
+                        <% end %>
+                    </ul>
+                </div>
+
+            <% end %>
+        <% end %>
+
+        <!-- 내부 참조용 패치노트 -->
+        <% if @internal_notes.any? %>
+            <h2 style="margin-top: 40px; margin-bottom: 10px; color: #d63; border-bottom: 2px solid #d63; padding-bottom: 5px;">
+                🔒 내부 참조용 패치노트 (운영자 전용)
+            </h2>
+            <p style="background: #fff3cd; border: 1px solid #ffc107; padding: 10px; border-radius: 4px; color: #856404; margin-bottom: 15px;">
+                ⚠️ 이 섹션의 패치노트는 유저 공개용 패치노트에 포함되지 않습니다.
+            </p>
+
+            <% @internal_notes_by_part.each do |part, notes| %>
+
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0;">내부 패치노트 #<%= part %></h3>
+                    <a href="#" onclick="copyPatchNotes(<%= part %>, 'internal'); return false;" class="icon icon-copy button">
+                        클립보드에 복사하기
+                    </a>
+                </div>
+                <div class="version-box" style="border-color: #d63;">
+                    <ul class="patch-notes-list-internal-<%= part %>" id="patch-notes-list-internal-<%= part %>">
+                        <% notes.each do |note| %>
+                            <%
+                                worker_name = if note[:issue].worker_id.present?
+                                    u = User.where(id: note[:issue].worker_id).first
+                                    u.present? ? u.name : note[:issue].assigned_to.name
+                                else
+                                    note[:issue].assigned_to.name
+                                end
+                            %>
+                            <li class="note-item">
+                                <strong class="note-item-title">
+                                    <%= note[:issue].subject %> <%= link_to "#" + note[:issue].id.to_s, issue_path(note[:issue]) %>
+                                </strong> <span style="font-size: 0.8em; color: #666;">(담당자: <%= worker_name.gsub(/ /, '') %>)</span>
+                                <div class="note-item-content wiki">
+                                    <%= textilizable(note[:notes], :object => note[:issue]) %>
+                                </div>
+                            </li>
+                        <% end %>
+                    </ul>
+                </div>
+
+            <% end %>
         <% end %>
 
         </div>
@@ -196,8 +246,17 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-function copyPatchNotes( part = 1) {
-    const patchNotesList = document.getElementById('patch-notes-list-' + part);
+function copyPatchNotes(part = 1, type = 'public') {
+    const listId = type === 'internal' ?
+        'patch-notes-list-internal-' + part :
+        'patch-notes-list-public-' + part;
+    const patchNotesList = document.getElementById(listId);
+
+    if (!patchNotesList) {
+        alert('패치노트 목록을 찾을 수 없습니다.');
+        return;
+    }
+
     const items = patchNotesList.getElementsByClassName('note-item');
     
     // 임시 div 생성

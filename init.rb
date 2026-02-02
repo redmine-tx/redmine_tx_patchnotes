@@ -29,6 +29,7 @@ Redmine::Plugin.register :redmine_tx_patchnotes do
     'e_exclude_status' => [],  # 제외할 일감 상태 기본값,
     'e_skip_tags' => 'NoQA',  # 패치노트 업어도 되는 태그 기본값
     'tracker_order' => [],
+    'internal_note_custom_field' => '',  # 패치노트 미공개용 커스텀 필드
   }, :partial => 'settings/redmine_tx_patchnotes'
 end
 

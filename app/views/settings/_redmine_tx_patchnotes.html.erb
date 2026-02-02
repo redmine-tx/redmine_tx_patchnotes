@@ -68,9 +68,29 @@
       <div class="item">
         <h3>패치노트 업어도 되는 태그</h3>
         <div class="input-wrapper">
-          <%= text_field_tag 'settings[patch_skip_tag]', 
-              Setting[:plugin_redmine_tx_patchnotes][:patch_skip_tag], 
+          <%= text_field_tag 'settings[patch_skip_tag]',
+              Setting[:plugin_redmine_tx_patchnotes][:patch_skip_tag],
               class: 'full-width' %>
+        </div>
+      </div>
+
+      <div class="item">
+        <h3>패치노트 미공개용 커스텀 필드</h3>
+        <div class="select-wrapper">
+          <%
+            # Boolean 타입의 커스텀 필드만 선택
+            boolean_custom_fields = IssueCustomField.where(field_format: 'bool').order(:name)
+            selected_field = Setting[:plugin_redmine_tx_patchnotes][:internal_note_custom_field].to_s
+          %>
+          <%= select_tag('settings[internal_note_custom_field]',
+              options_for_select(
+                [['(선택 안 함)', '']] + boolean_custom_fields.map { |cf| [cf.name, cf.id.to_s] },
+                selected: selected_field
+              ),
+              class: 'full-width') %>
+          <p style="color: #666; font-size: 0.9em; margin-top: 5px;">
+            이 커스텀 필드가 체크된 일감의 패치노트는 '내부 참조용 패치노트'로 분류됩니다.
+          </p>
         </div>
       </div>
 
