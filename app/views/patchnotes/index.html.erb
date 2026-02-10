@@ -3,6 +3,7 @@
     <%= javascript_include_tag 'context_menu' %>
     <%= stylesheet_link_tag 'scm' %>
     <%= stylesheet_link_tag 'wiki' %>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <% end %>
 
 <style>
@@ -118,9 +119,14 @@
 
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="margin: 0;">패치노트 #<%= part %></h3>
-                    <a href="#" onclick="copyPatchNotes(<%= part %>, 'public'); return false;" class="icon icon-copy button">
-                        클립보드에 복사하기
-                    </a>
+                    <div style="display: flex; gap: 10px;">
+                        <a href="#" onclick="exportPatchNotesToExcel(<%= part %>, 'public'); return false;" class="icon icon-download button">
+                            엑셀 다운로드
+                        </a>
+                        <a href="#" onclick="copyPatchNotes(<%= part %>, 'public'); return false;" class="icon icon-copy button">
+                            클립보드에 복사하기
+                        </a>
+                    </div>
                 </div>
                 <div class="version-box">
                     <ul class="patch-notes-list-public-<%= part %>" id="patch-notes-list-public-<%= part %>">
@@ -133,7 +139,15 @@
                                     note[:issue].assigned_to.name
                                 end
                             %>
-                            <li class="note-item">
+                            <li class="note-item"
+                                data-issue-id="<%= note[:issue].id %>"
+                                data-issue-url="<%= issue_url(note[:issue]) %>"
+                                data-tracker="<%= note[:issue].tracker.name %>"
+                                data-category="<%= note[:issue].category.present? ? note[:issue].category.name : '' %>"
+                                data-status="<%= note[:issue].status.name %>"
+                                data-priority="<%= note[:issue].priority.name %>"
+                                data-done-ratio="<%= note[:issue].done_ratio %>"
+                                data-assignee="<%= worker_name.gsub(/ /, '') %>">
                                 <strong class="note-item-title">
                                     <%= note[:issue].subject %> <%= link_to "#" + note[:issue].id.to_s, issue_path(note[:issue]) %>
                                 </strong> <span style="font-size: 0.8em; color: #666;">(담당자: <%= worker_name.gsub(/ /, '') %>)</span>
@@ -161,9 +175,14 @@
 
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="margin: 0;">내부 패치노트 #<%= part %></h3>
-                    <a href="#" onclick="copyPatchNotes(<%= part %>, 'internal'); return false;" class="icon icon-copy button">
-                        클립보드에 복사하기
-                    </a>
+                    <div style="display: flex; gap: 10px;">
+                        <a href="#" onclick="exportPatchNotesToExcel(<%= part %>, 'internal'); return false;" class="icon icon-download button">
+                            엑셀 다운로드
+                        </a>
+                        <a href="#" onclick="copyPatchNotes(<%= part %>, 'internal'); return false;" class="icon icon-copy button">
+                            클립보드에 복사하기
+                        </a>
+                    </div>
                 </div>
                 <div class="version-box" style="border-color: #d63;">
                     <ul class="patch-notes-list-internal-<%= part %>" id="patch-notes-list-internal-<%= part %>">
@@ -176,7 +195,15 @@
                                     note[:issue].assigned_to.name
                                 end
                             %>
-                            <li class="note-item">
+                            <li class="note-item"
+                                data-issue-id="<%= note[:issue].id %>"
+                                data-issue-url="<%= issue_url(note[:issue]) %>"
+                                data-tracker="<%= note[:issue].tracker.name %>"
+                                data-category="<%= note[:issue].category.present? ? note[:issue].category.name : '' %>"
+                                data-status="<%= note[:issue].status.name %>"
+                                data-priority="<%= note[:issue].priority.name %>"
+                                data-done-ratio="<%= note[:issue].done_ratio %>"
+                                data-assignee="<%= worker_name.gsub(/ /, '') %>">
                                 <strong class="note-item-title">
                                     <%= note[:issue].subject %> <%= link_to "#" + note[:issue].id.to_s, issue_path(note[:issue]) %>
                                 </strong> <span style="font-size: 0.8em; color: #666;">(담당자: <%= worker_name.gsub(/ /, '') %>)</span>
@@ -236,7 +263,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const tabLinks = document.querySelectorAll('.tab-link');
-    
+
     tabLinks.forEach(link => {
         link.addEventListener('click', function(e) {
             // 탭 클릭 시 페이지 이동이 되므로 이벤트 처리는 제거
@@ -245,6 +272,141 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// HTML을 Plain Text로 변환하는 함수
+function htmlToPlainText(html) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+
+    // 줄바꿈 처리: <br>, <p>, <div> 등을 줄바꿈으로 변환
+    tempDiv.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+    tempDiv.querySelectorAll('p, div, li').forEach(el => {
+        el.appendChild(document.createTextNode('\n'));
+    });
+
+    // 텍스트만 추출
+    return tempDiv.textContent || tempDiv.innerText || '';
+}
+
+// 엑셀 다운로드 함수
+async function exportPatchNotesToExcel(part = 1, type = 'public') {
+    const listId = type === 'internal' ?
+        'patch-notes-list-internal-' + part :
+        'patch-notes-list-public-' + part;
+    const patchNotesList = document.getElementById(listId);
+
+    if (!patchNotesList) {
+        alert('패치노트 목록을 찾을 수 없습니다.');
+        return;
+    }
+
+    try {
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('패치노트');
+
+        // 헤더 설정
+        worksheet.columns = [
+            { header: 'ID', key: 'id', width: 10 },
+            { header: '유형', key: 'tracker', width: 12 },
+            { header: '범주', key: 'category', width: 15 },
+            { header: '제목', key: 'subject', width: 40 },
+            { header: '디테일', key: 'detail', width: 60 },
+            { header: '담당자', key: 'assignee', width: 15 },
+            { header: '상태', key: 'status', width: 12 },
+            { header: '우선순위', key: 'priority', width: 12 },
+            { header: '진행율', key: 'done_ratio', width: 10 }
+        ];
+
+        // 헤더 스타일 설정
+        worksheet.getRow(1).font = { bold: true };
+        worksheet.getRow(1).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFE0E0E0' }
+        };
+
+        // 각 패치노트 항목 추가
+        const items = patchNotesList.getElementsByClassName('note-item');
+        Array.from(items).forEach((item, index) => {
+            const titleElement = item.querySelector('.note-item-title');
+            const contentElement = item.querySelector('.note-item-content');
+
+            // data attribute에서 정보 가져오기
+            const issueId = item.dataset.issueId || '';
+            const issueUrl = item.dataset.issueUrl || '';
+            const tracker = item.dataset.tracker || '';
+            const category = item.dataset.category || '';
+            const status = item.dataset.status || '';
+            const priority = item.dataset.priority || '';
+            const doneRatio = item.dataset.doneRatio || '0';
+            const assignee = item.dataset.assignee || '';
+
+            // 제목 추출 (일감 번호와 담당자 정보 제외)
+            const titleText = titleElement.textContent.trim();
+            const subject = titleText
+                .replace(/#\d+/, '')  // #숫자 제거
+                .replace(/\(담당자:.*?\)/, '')  // 담당자 정보 제거
+                .trim();
+
+            // HTML을 Plain Text로 변환
+            const detail = htmlToPlainText(contentElement.innerHTML);
+
+            // 행 추가
+            const row = worksheet.addRow({
+                id: issueId,
+                tracker: tracker,
+                category: category,
+                subject: subject,
+                detail: detail.trim(),
+                assignee: assignee,
+                status: status,
+                priority: priority,
+                done_ratio: doneRatio + '%'
+            });
+
+            // ID 컬럼에 하이퍼링크 추가
+            if (issueUrl) {
+                row.getCell('id').value = {
+                    text: issueId,
+                    hyperlink: issueUrl,
+                    tooltip: '일감 보기'
+                };
+                row.getCell('id').font = { color: { argb: 'FF0066CC' }, underline: true };
+            }
+
+            // 디테일 셀 줄바꿈 설정
+            row.getCell('detail').alignment = { wrapText: true, vertical: 'top' };
+
+            // 모든 셀 세로 정렬을 상단으로
+            row.eachCell((cell) => {
+                if (!cell.alignment) cell.alignment = {};
+                cell.alignment.vertical = 'top';
+            });
+        });
+
+        // 파일명 생성
+        const versionName = '<%= @selected_version.name %>';
+        const typeLabel = type === 'internal' ? '내부용' : '공개용';
+        const fileName = `패치노트_${versionName}_Part${part}_${typeLabel}.xlsx`;
+
+        // 엑셀 파일 생성 및 다운로드
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        alert('엑셀 파일이 다운로드되었습니다.');
+    } catch (error) {
+        console.error('엑셀 생성 실패:', error);
+        alert('엑셀 생성 중 오류가 발생했습니다: ' + error.message);
+    }
+}
 
 function copyPatchNotes(part = 1, type = 'public') {
     const listId = type === 'internal' ?
