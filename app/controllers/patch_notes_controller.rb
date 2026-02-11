@@ -40,6 +40,7 @@ class PatchNotesController < ApplicationController
 
     respond_to do |format|
       if @patch_note.save
+        log_journal(@issue, l(:journal_patch_note_created, part: @patch_note.part))
         format.html { redirect_to issue_path(@issue), notice: l(:notice_patch_note_created) }
         format.js
       else
@@ -59,6 +60,7 @@ class PatchNotesController < ApplicationController
   def update
     respond_to do |format|
       if @patch_note.update(patch_note_params)
+        log_journal(@patch_note.issue, l(:journal_patch_note_updated, part: @patch_note.part))
         format.html { redirect_to issue_path(@patch_note.issue), notice: l(:notice_patch_note_updated) }
         format.js
       else
@@ -70,7 +72,9 @@ class PatchNotesController < ApplicationController
 
   def destroy
     issue = @patch_note.issue
+    part = @patch_note.part
     @patch_note.destroy
+    log_journal(issue, l(:journal_patch_note_deleted, part: part))
     respond_to do |format|
       format.html { redirect_to issue_path(issue), notice: l(:notice_patch_note_deleted) }
       format.js { @issue = issue }
@@ -92,6 +96,12 @@ class PatchNotesController < ApplicationController
         skip_reason: params[:skip_reason]
       )
     end
+    reason = params[:skip_reason].presence
+    if reason
+      log_journal(@issue, l(:journal_patch_note_skipped_with_reason, reason: reason))
+    else
+      log_journal(@issue, l(:journal_patch_note_skipped))
+    end
     respond_to do |format|
       format.html { redirect_to issue_path(@issue), notice: l(:notice_patch_note_skipped) }
       format.js
@@ -100,6 +110,7 @@ class PatchNotesController < ApplicationController
 
   def unskip
     PatchNote.for_issue(@issue.id).skipped.destroy_all
+    log_journal(@issue, l(:journal_patch_note_unskipped))
     respond_to do |format|
       format.html { redirect_to issue_path(@issue), notice: l(:notice_patch_note_unskipped) }
       format.js
@@ -144,5 +155,10 @@ class PatchNotesController < ApplicationController
 
   def allow_multiple_parts?
     Setting[:plugin_redmine_tx_patchnotes][:allow_multiple_parts].to_s == '1'
+  end
+
+  def log_journal(issue, notes)
+    issue.init_journal(User.current, notes)
+    issue.save
   end
 end

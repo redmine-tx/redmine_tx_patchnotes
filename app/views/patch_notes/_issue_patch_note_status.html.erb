@@ -33,13 +33,10 @@
     <% active_notes.each do |pn| %>
       <div class="patch-note-entry" id="patch-note-display-<%= pn.id %>">
         <div class="patch-note-entry-header">
-          <% if allow_multi %>
-            <span class="patch-note-part-label">Part #<%= pn.part %></span>
-          <% end %>
           <% if pn.is_internal? %>
             <span class="pn-badge pn-badge-internal">internal</span>
           <% end %>
-          <span class="patch-note-author">by <%= pn.author.name %></span>
+          <span class="patch-note-author">Part #<%= pn.part %> · by <%= pn.author.name %> · <%= format_time(pn.updated_at) %></span>
           <% if has_edit_permission && pn.editable_by?(User.current) %>
             <span class="patch-note-actions-inline">
               <%= link_to l(:button_edit), edit_patch_note_path(pn), remote: true, method: :get, class: 'icon icon-edit' %>

@@ -20,6 +20,13 @@ en:
 
   error_patch_note_single_only: "Only one patch note per issue is allowed. Enable multiple parts in settings to add more."
 
+  journal_patch_note_created: "Patch note Part #%{part} created"
+  journal_patch_note_updated: "Patch note Part #%{part} updated"
+  journal_patch_note_deleted: "Patch note Part #%{part} deleted"
+  journal_patch_note_skipped: "Patch note marked as not required"
+  journal_patch_note_skipped_with_reason: "Patch note marked as not required (reason: %{reason})"
+  journal_patch_note_unskipped: "Patch note skip status removed"
+
   permission_view_patchnotes: "View patch notes"
   permission_edit_patchnotes: "Edit patch notes"
   permission_edit_own_patchnotes: "Edit own patch notes"

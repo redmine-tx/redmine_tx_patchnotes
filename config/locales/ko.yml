@@ -20,6 +20,13 @@ ko:
 
   error_patch_note_single_only: "일감 당 하나의 패치노트만 작성할 수 있습니다. 다중 패치노트를 사용하려면 설정에서 활성화하세요."
 
+  journal_patch_note_created: "패치노트 Part #%{part} 작성"
+  journal_patch_note_updated: "패치노트 Part #%{part} 수정"
+  journal_patch_note_deleted: "패치노트 Part #%{part} 삭제"
+  journal_patch_note_skipped: "패치노트 불필요 처리"
+  journal_patch_note_skipped_with_reason: "패치노트 불필요 처리 (사유: %{reason})"
+  journal_patch_note_unskipped: "패치노트 불필요 처리 해제"
+
   permission_view_patchnotes: "패치노트 보기"
   permission_edit_patchnotes: "패치노트 편집"
   permission_edit_own_patchnotes: "자신의 패치노트 편집"
