@@ -4,6 +4,7 @@
   skip_note = patch_notes.skipped.first
   has_edit_permission = User.current.allowed_to?(:edit_patchnotes, issue.project) ||
                         User.current.allowed_to?(:edit_own_patchnotes, issue.project)
+  allow_multi = Setting[:plugin_redmine_tx_patchnotes][:allow_multiple_parts].to_s == '1'
 %>
 
 <%= stylesheet_link_tag 'patch_notes', plugin: 'redmine_tx_patchnotes' %>
@@ -26,7 +27,9 @@
     <% active_notes.each do |pn| %>
       <div class="patch-note-entry" id="patch-note-display-<%= pn.id %>">
         <div class="patch-note-entry-header">
-          <span class="patch-note-part-label">Part #<%= pn.part %></span>
+          <% if allow_multi %>
+            <span class="patch-note-part-label">Part #<%= pn.part %></span>
+          <% end %>
           <% if pn.is_internal? %>
             <span class="pn-badge pn-badge-internal">internal</span>
           <% end %>
@@ -66,8 +69,10 @@
 
   <% if has_edit_permission && !skip_note %>
     <div id="patch-note-actions">
-      <%= link_to l(:button_patch_note_create), new_issue_patch_note_path(issue), remote: true, method: :get,
-            class: 'icon icon-add button' %>
+      <% if allow_multi || active_notes.empty? %>
+        <%= link_to l(:button_patch_note_create), new_issue_patch_note_path(issue), remote: true, method: :get,
+              class: 'icon icon-add button' %>
+      <% end %>
       <a href="#" onclick="showSkipForm(<%= issue.id %>); return false;" class="icon icon-cancel button-skip">
         <%= l(:button_patch_note_skip) %>
       </a>

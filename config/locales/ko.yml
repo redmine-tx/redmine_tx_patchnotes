@@ -18,6 +18,8 @@ ko:
 
   text_patch_note_skip_placeholder: "패치노트가 필요없는 이유를 입력하세요"
 
+  error_patch_note_single_only: "일감 당 하나의 패치노트만 작성할 수 있습니다. 다중 패치노트를 사용하려면 설정에서 활성화하세요."
+
   permission_view_patchnotes: "패치노트 보기"
   permission_edit_patchnotes: "패치노트 편집"
   permission_edit_own_patchnotes: "자신의 패치노트 편집"

@@ -32,9 +32,12 @@ Redmine::Plugin.register :redmine_tx_patchnotes do
     'e_skip_tags' => 'NoQA',  # 패치노트 업어도 되는 태그 기본값
     'tracker_order' => [],
     'internal_note_custom_field' => '',  # 패치노트 미공개용 커스텀 필드
+    'auto_sync_text_to_db' => '0',  # 텍스트 헤더 자동 DB 동기화 (기본 OFF)
+    'allow_multiple_parts' => '0',  # 다중 파트 패치노트 허용 (기본 OFF)
   }, :partial => 'settings/redmine_tx_patchnotes'
 end
 
 Rails.application.config.after_initialize do
   require_dependency File.expand_path('../lib/tx_patchnotes_hook', __FILE__)
+  require_dependency File.expand_path('../lib/patch_note_text_sync', __FILE__)
 end

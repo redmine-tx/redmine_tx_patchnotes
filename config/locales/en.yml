@@ -18,6 +18,8 @@ en:
 
   text_patch_note_skip_placeholder: "Why is patch note not needed?"
 
+  error_patch_note_single_only: "Only one patch note per issue is allowed. Enable multiple parts in settings to add more."
+
   permission_view_patchnotes: "View patch notes"
   permission_edit_patchnotes: "Edit patch notes"
   permission_edit_own_patchnotes: "Edit own patch notes"

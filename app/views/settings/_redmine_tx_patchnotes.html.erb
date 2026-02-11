@@ -48,6 +48,29 @@
       </div>
 
       <div class="item">
+        <h3>다중 패치노트 기입 허용</h3>
+        <div class="checkbox-wrapper">
+          <%= check_box_tag 'settings[allow_multiple_parts]', '1',
+              Setting[:plugin_redmine_tx_patchnotes][:allow_multiple_parts] == '1' %>
+          <span>한 일감에 여러 파트의 패치노트 기입 허용</span>
+        </div>
+        <p style="color: #999; font-size: 0.85em; margin-top: 4px;">
+          비활성화하면 일감 당 하나의 패치노트만 작성 가능합니다.</p>
+      </div>
+
+      <div class="item">
+        <h3>텍스트 헤더 자동 DB 동기화</h3>
+        <div class="checkbox-wrapper">
+          <%= check_box_tag 'settings[auto_sync_text_to_db]', '1',
+              Setting[:plugin_redmine_tx_patchnotes][:auto_sync_text_to_db] == '1' %>
+          <span>본문/코멘트에 PATCH_NOTE 헤더 작성 시 자동으로 DB에 기입</span>
+        </div>
+        <p style="color: #999; font-size: 0.85em; margin-top: 4px;">
+          활성화하면 기존 방식대로 헤더를 작성해도 DB 패치노트가 자동 생성됩니다.
+          이미 DB에 동일 파트의 패치노트가 있는 일감은 건너뜁니다.</p>
+      </div>
+
+      <div class="item">
         <h3>패치노트 헤더 <span style="color: #999; font-size: 0.8em;">(레거시 - 마이그레이션용)</span></h3>
         <div class="input-wrapper">
           <%= text_field_tag 'settings[patch_note_header]',

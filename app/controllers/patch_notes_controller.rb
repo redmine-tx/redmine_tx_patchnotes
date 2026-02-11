@@ -5,6 +5,16 @@ class PatchNotesController < ApplicationController
   before_action :authorize_edit
 
   def new
+    unless allow_multiple_parts?
+      if PatchNote.for_issue(@issue.id).active.exists?
+        respond_to do |format|
+          format.html { redirect_to issue_path(@issue), alert: l(:error_patch_note_single_only) }
+          format.js { render js: "alert('#{j l(:error_patch_note_single_only)}');" }
+        end
+        return
+      end
+    end
+
     @patch_note = PatchNote.new(part: next_available_part(@issue))
     respond_to do |format|
       format.html
@@ -16,6 +26,18 @@ class PatchNotesController < ApplicationController
     @patch_note = PatchNote.new(patch_note_params)
     @patch_note.issue = @issue
     @patch_note.author = User.current
+
+    unless allow_multiple_parts?
+      @patch_note.part = 1
+      if PatchNote.for_issue(@issue.id).active.exists?
+        @patch_note.errors.add(:base, l(:error_patch_note_single_only))
+        respond_to do |format|
+          format.html { render :new }
+          format.js
+        end
+        return
+      end
+    end
 
     respond_to do |format|
       if @patch_note.save
@@ -119,5 +141,9 @@ class PatchNotesController < ApplicationController
     part = 1
     part += 1 while existing_parts.include?(part)
     part
+  end
+
+  def allow_multiple_parts?
+    Setting[:plugin_redmine_tx_patchnotes][:allow_multiple_parts].to_s == '1'
   end
 end

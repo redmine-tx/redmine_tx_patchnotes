@@ -68,9 +68,12 @@
         <% if @public_notes.any? %>
             <h2 class="pn-section-header--public">공개용 패치노트 (<%= @public_notes.count %>)</h2>
 
+            <% allow_multi = Setting[:plugin_redmine_tx_patchnotes][:allow_multiple_parts].to_s == '1' %>
             <% @public_notes_by_part.each do |part, notes| %>
                 <div class="pn-part-header">
-                    <h3 class="pn-part-title">Part #<%= part %></h3>
+                    <% if allow_multi %>
+                        <h3 class="pn-part-title">Part #<%= part %></h3>
+                    <% end %>
                     <div class="pn-part-actions">
                         <a href="#" onclick="exportPatchNotesToExcel(<%= part %>, 'public'); return false;" class="icon icon-download button">엑셀</a>
                         <a href="#" onclick="copyPatchNotes(<%= part %>, 'public'); return false;" class="icon icon-copy button">복사</a>
@@ -115,7 +118,9 @@
 
             <% @internal_notes_by_part.each do |part, notes| %>
                 <div class="pn-part-header">
-                    <h3 class="pn-part-title">내부 Part #<%= part %></h3>
+                    <% if allow_multi %>
+                        <h3 class="pn-part-title">내부 Part #<%= part %></h3>
+                    <% end %>
                     <div class="pn-part-actions">
                         <a href="#" onclick="exportPatchNotesToExcel(<%= part %>, 'internal'); return false;" class="icon icon-download button">엑셀</a>
                         <a href="#" onclick="copyPatchNotes(<%= part %>, 'internal'); return false;" class="icon icon-copy button">복사</a>
