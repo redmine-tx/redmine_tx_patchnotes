@@ -60,6 +60,21 @@ class PatchnotesController < ApplicationController
             issues.reject! { |issue| @no_patch_note_issues.include?(issue) }
         end
 
+        # 미대상 유형 허용 시: 패치노트가 작성된 미대상 트래커 일감도 포함
+        if Setting[:plugin_redmine_tx_patchnotes][:allow_non_target_tracker].to_s == '1'
+            extra_issue_ids = PatchNote.joins(:issue)
+                .where(issues: { fixed_version_id: @selected_version.id })
+                .where.not(issues: { tracker_id: config_tracker_on })
+                .where.not(issues: { status_id: IssueStatus.discarded_ids })
+                .where.not(issue_id: issues.map(&:id))
+                .pluck(:issue_id).uniq
+            if extra_issue_ids.any?
+                extra_issues = Issue.where(id: extra_issue_ids).to_a
+                extra_issues.reject! { |issue| config_tracker_off.include?(issue.tracker_id) }
+                issues.concat(extra_issues)
+            end
+        end
+
         issues.sort_by! { |issue| [0 - issue.priority.position, issue.done_ratio] }
 
         # DB에서 패치노트 조회
