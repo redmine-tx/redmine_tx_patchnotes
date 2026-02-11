@@ -40,16 +40,20 @@ class PatchnotesController < ApplicationController
             .to_a
         issues.reject! { |issue| config_tracker_off.include?(issue.tracker_id) }
 
-        # 상위 부모들 중 config_tracker_off 인 일감이 존재하는 일감도 제거
-        issues.reject! { |issue| 
+        # 상위 부모 체인 검사:
+        # - config_tracker_off 유형의 부모가 있으면 제거
+        # - config_tracker_on 유형의 부모가 있으면 제거 (부모에서 패치노트 기재)
+        issues.reject! { |issue|
             current = issue
+            excluded = false
             while current.parent_id.present?
                 current = current.parent
-                if config_tracker_off.include?(current.tracker_id)
-                    true
+                if config_tracker_off.include?(current.tracker_id) || config_tracker_on.include?(current.tracker_id)
+                    excluded = true
                     break
                 end
             end
+            excluded
         }
 
         @no_patch_note_issues = []
