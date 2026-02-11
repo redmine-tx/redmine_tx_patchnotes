@@ -77,26 +77,6 @@
       </div>
 
       <div class="item">
-        <h3>패치노트 미공개용 커스텀 필드 <span style="color: #999; font-size: 0.8em;">(레거시 - 마이그레이션용)</span></h3>
-        <div class="select-wrapper">
-          <%
-            # Boolean 타입의 커스텀 필드만 선택
-            boolean_custom_fields = IssueCustomField.where(field_format: 'bool').order(:name)
-            selected_field = Setting[:plugin_redmine_tx_patchnotes][:internal_note_custom_field].to_s
-          %>
-          <%= select_tag('settings[internal_note_custom_field]',
-              options_for_select(
-                [['(선택 안 함)', '']] + boolean_custom_fields.map { |cf| [cf.name, cf.id.to_s] },
-                selected: selected_field
-              ),
-              class: 'full-width', disabled: true) %>
-          <p style="color: #999; font-size: 0.85em; margin-top: 5px;">
-            DB 전환 후 내부용 여부는 패치노트 작성 시 직접 체크합니다. 마이그레이션에만 사용됩니다.
-          </p>
-        </div>
-      </div>
-
-      <div class="item">
         <h3>패치노트 유형 순서</h3>
         <div class="tracker-order-wrapper">
           <div class="tracker-order-list" id="tracker-order-list">

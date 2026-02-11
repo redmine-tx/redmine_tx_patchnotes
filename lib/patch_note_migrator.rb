@@ -19,9 +19,12 @@ class PatchNoteMigrator
     puts "#{label}Starting full migration of text-based patch notes to DB..."
     puts "  Header: '#{@patch_note_header}', Skip header: '#{@patch_skip_header}'"
     puts "  Internal custom field ID: #{@internal_custom_field_id || '(none)'}"
+
+    target_ids = find_target_issue_ids
+    puts "  Target issues: #{target_ids.size}"
     puts ""
 
-    Issue.find_each do |issue|
+    Issue.where(id: target_ids).find_each do |issue|
       migrate_issue(issue)
     end
     print_stats
@@ -32,9 +35,12 @@ class PatchNoteMigrator
     label = dry_run? ? '[DRY RUN] ' : ''
     puts "#{label}Migrating patch notes for version: #{version.name} (ID: #{version.id})..."
     puts "  Header: '#{@patch_note_header}', Skip header: '#{@patch_skip_header}'"
+
+    target_ids = find_target_issue_ids(scope: Issue.where(fixed_version_id: version.id))
+    puts "  Target issues: #{target_ids.size}"
     puts ""
 
-    Issue.where(fixed_version_id: version.id).find_each do |issue|
+    Issue.where(id: target_ids).find_each do |issue|
       migrate_issue(issue)
     end
     print_stats
@@ -123,19 +129,57 @@ class PatchNoteMigrator
 
   private
 
+  def find_target_issue_ids(scope: nil)
+    headers = [@patch_note_header, @patch_skip_header]
+
+    # description에서 헤더가 있는 일감
+    desc_query = scope || Issue
+    ids_from_desc = headers.flat_map do |header|
+      desc_query.where("description LIKE ?", "%#{header}%").pluck(:id)
+    end
+
+    # journal notes에서 헤더가 있는 일감
+    journal_query = Journal.where(journalized_type: 'Issue')
+    if scope
+      journal_query = journal_query.where(journalized_id: scope.select(:id))
+    end
+    ids_from_journals = headers.flat_map do |header|
+      journal_query.where("notes LIKE ?", "%#{header}%").pluck(:journalized_id)
+    end
+
+    # 이미 DB에 있는 일감 제외
+    already_migrated = PatchNote.pluck(:issue_id)
+
+    target_ids = (ids_from_desc + ids_from_journals).uniq - already_migrated
+    target_ids
+  end
+
   def find_patch_note_info(full_notes)
     header_index = full_notes.index(@patch_note_header)
     return nil unless header_index
 
     lines_from_header = full_notes[header_index..-1].split("\n")
-    header = lines_from_header[0]
-    notes = lines_from_header[1..-1].join("\n")
+    header_line = lines_from_header[0]
 
-    part = if header.include?('#')
-             header.split('#').last.to_i
-           else
-             1
-           end
+    # Extract part number and inline content from header line
+    # e.g. "PATCH_NOTE#2 some content" or "PATCH_NOTE some content"
+    after_keyword = header_line[@patch_note_header.length..-1].to_s
+    part = 1
+    if after_keyword =~ /\A#(\d+)/
+      part = $1.to_i
+      after_keyword = after_keyword.sub(/\A#\d+/, '')
+    end
+    inline_content = after_keyword.strip
+
+    # Combine inline content with subsequent lines
+    subsequent_lines = lines_from_header[1..-1].join("\n")
+    notes = if inline_content.present? && subsequent_lines.present?
+              "#{inline_content}\n#{subsequent_lines}"
+            elsif inline_content.present?
+              inline_content
+            else
+              subsequent_lines
+            end
 
     { notes: notes, part: part }
   end
