@@ -1,0 +1,3 @@
+$('#patch-note-display-<%= @patch_note.id %>').hide();
+$('#patch-note-edit-container-<%= @patch_note.id %>').html('<%= j render partial: "patch_notes/form", locals: { patch_note: @patch_note, issue: @issue } %>');
+$('#patch-note-edit-container-<%= @patch_note.id %>').show();

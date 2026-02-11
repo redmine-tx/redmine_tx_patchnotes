@@ -1,0 +1,5 @@
+<% if @patch_note.errors.any? %>
+$('#patch-note-form-container').html('<%= j render partial: "patch_notes/form", locals: { patch_note: @patch_note, issue: @issue } %>');
+<% else %>
+window.location.reload();
+<% end %>

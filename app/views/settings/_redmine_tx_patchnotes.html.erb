@@ -48,20 +48,22 @@
       </div>
 
       <div class="item">
-        <h3>패치노트 헤더</h3>
+        <h3>패치노트 헤더 <span style="color: #999; font-size: 0.8em;">(레거시 - 마이그레이션용)</span></h3>
         <div class="input-wrapper">
-          <%= text_field_tag 'settings[patch_note_header]', 
-              Setting[:plugin_redmine_tx_patchnotes][:patch_note_header], 
-              class: 'full-width' %>
+          <%= text_field_tag 'settings[patch_note_header]',
+              Setting[:plugin_redmine_tx_patchnotes][:patch_note_header],
+              class: 'full-width', disabled: true %>
+          <p style="color: #999; font-size: 0.85em; margin-top: 4px;">DB 전환 후 텍스트 마이그레이션에만 사용됩니다.</p>
         </div>
       </div>
 
       <div class="item">
-        <h3>패치노트 스킵 헤더</h3>
+        <h3>패치노트 스킵 헤더 <span style="color: #999; font-size: 0.8em;">(레거시 - 마이그레이션용)</span></h3>
         <div class="input-wrapper">
-          <%= text_field_tag 'settings[patch_skip_header]', 
-              Setting[:plugin_redmine_tx_patchnotes][:patch_skip_header], 
-              class: 'full-width' %>
+          <%= text_field_tag 'settings[patch_skip_header]',
+              Setting[:plugin_redmine_tx_patchnotes][:patch_skip_header],
+              class: 'full-width', disabled: true %>
+          <p style="color: #999; font-size: 0.85em; margin-top: 4px;">DB 전환 후 텍스트 마이그레이션에만 사용됩니다.</p>
         </div>
       </div>
 
@@ -75,7 +77,7 @@
       </div>
 
       <div class="item">
-        <h3>패치노트 미공개용 커스텀 필드</h3>
+        <h3>패치노트 미공개용 커스텀 필드 <span style="color: #999; font-size: 0.8em;">(레거시 - 마이그레이션용)</span></h3>
         <div class="select-wrapper">
           <%
             # Boolean 타입의 커스텀 필드만 선택
@@ -87,9 +89,9 @@
                 [['(선택 안 함)', '']] + boolean_custom_fields.map { |cf| [cf.name, cf.id.to_s] },
                 selected: selected_field
               ),
-              class: 'full-width') %>
-          <p style="color: #666; font-size: 0.9em; margin-top: 5px;">
-            이 커스텀 필드가 체크된 일감의 패치노트는 '내부 참조용 패치노트'로 분류됩니다.
+              class: 'full-width', disabled: true) %>
+          <p style="color: #999; font-size: 0.85em; margin-top: 5px;">
+            DB 전환 후 내부용 여부는 패치노트 작성 시 직접 체크합니다. 마이그레이션에만 사용됩니다.
           </p>
         </div>
       </div>
@@ -328,4 +330,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<%= Setting[:plugin_redmine_tx_patchnotes] %>

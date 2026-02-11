@@ -1,3 +1,23 @@
-# English strings go here for Rails i18n
 en:
-  # my_label: "My label"
+  notice_patch_note_created: "Patch note was successfully created."
+  notice_patch_note_updated: "Patch note was successfully updated."
+  notice_patch_note_deleted: "Patch note was successfully deleted."
+  notice_patch_note_skipped: "Issue marked as patch note not required."
+  notice_patch_note_unskipped: "Patch note skip status removed."
+
+  button_patch_note_create: "Write Patch Note"
+  button_patch_note_skip: "Not Required"
+  button_patch_note_unskip: "Remove Skip"
+
+  field_patch_note_part: "Part"
+  field_patch_note_content: "Content"
+  field_patch_note_is_internal: "Internal only (not for public release notes)"
+  field_patch_note_skip_reason: "Reason"
+
+  label_patch_note_no_reason: "(no reason provided)"
+
+  text_patch_note_skip_placeholder: "Why is patch note not needed?"
+
+  permission_view_patchnotes: "View patch notes"
+  permission_edit_patchnotes: "Edit patch notes"
+  permission_edit_own_patchnotes: "Edit own patch notes"

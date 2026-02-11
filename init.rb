@@ -21,6 +21,8 @@ Redmine::Plugin.register :redmine_tx_patchnotes do
 
   project_module :redmine_tx_patchnotes do
     permission :view_patchnotes, { patchnotes: [:index] }
+    permission :edit_patchnotes, { patch_notes: [:new, :create, :edit, :update, :destroy, :skip, :unskip] }
+    permission :edit_own_patchnotes, { patch_notes: [:new, :create, :edit, :update, :destroy, :skip, :unskip] }
   end
 
   settings :default => {
@@ -33,8 +35,6 @@ Redmine::Plugin.register :redmine_tx_patchnotes do
   }, :partial => 'settings/redmine_tx_patchnotes'
 end
 
-# JavaScript assets 등록
-#Rails.application.config.assets.paths << File.join(File.dirname(__FILE__), 'app', 'assets', 'javascripts')
-#Rails.application.config.assets.precompile += %w( patchnotes.js )
-
-
+Rails.application.config.after_initialize do
+  require_dependency File.expand_path('../lib/tx_patchnotes_hook', __FILE__)
+end

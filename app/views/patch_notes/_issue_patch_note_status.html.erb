@@ -1,0 +1,91 @@
+<%
+  patch_notes = PatchNote.for_issue(issue.id).order(:part)
+  active_notes = patch_notes.active.to_a
+  skip_note = patch_notes.skipped.first
+  has_edit_permission = User.current.allowed_to?(:edit_patchnotes, issue.project) ||
+                        User.current.allowed_to?(:edit_own_patchnotes, issue.project)
+%>
+
+<%= stylesheet_link_tag 'patch_notes', plugin: 'redmine_tx_patchnotes' %>
+<%= javascript_include_tag 'patch_notes', plugin: 'redmine_tx_patchnotes' %>
+
+<div id="patch-notes-section" class="patch-notes-section">
+  <hr />
+  <h3 class="patch-notes-header">
+    Patch Notes
+    <% if active_notes.any? %>
+      <span class="pn-badge pn-badge-success"><%= active_notes.size %></span>
+    <% elsif skip_note %>
+      <span class="pn-badge pn-badge-skip">SKIP</span>
+    <% else %>
+      <span class="pn-badge pn-badge-none">-</span>
+    <% end %>
+  </h3>
+
+  <% if active_notes.any? %>
+    <% active_notes.each do |pn| %>
+      <div class="patch-note-entry" id="patch-note-display-<%= pn.id %>">
+        <div class="patch-note-entry-header">
+          <span class="patch-note-part-label">Part #<%= pn.part %></span>
+          <% if pn.is_internal? %>
+            <span class="pn-badge pn-badge-internal">internal</span>
+          <% end %>
+          <span class="patch-note-author">by <%= pn.author.name %></span>
+          <% if has_edit_permission && pn.editable_by?(User.current) %>
+            <span class="patch-note-actions-inline">
+              <%= link_to l(:button_edit), edit_patch_note_path(pn), remote: true, method: :get, class: 'icon icon-edit' %>
+              <%= link_to l(:button_delete), patch_note_path(pn), remote: true, method: :delete,
+                    data: { confirm: l(:text_are_you_sure) }, class: 'icon icon-del' %>
+            </span>
+          <% end %>
+        </div>
+        <div class="patch-note-content wiki">
+          <%= textilizable(pn.content, object: issue) %>
+        </div>
+      </div>
+      <div id="patch-note-edit-container-<%= pn.id %>"></div>
+    <% end %>
+  <% end %>
+
+  <% if skip_note %>
+    <div class="patch-note-skip-info">
+      <span class="pn-badge pn-badge-skip">SKIP</span>
+      <span class="patch-note-skip-reason">
+        <% if skip_note.skip_reason.present? %>
+          <%= skip_note.skip_reason %>
+        <% else %>
+          <%= l(:label_patch_note_no_reason) %>
+        <% end %>
+      </span>
+      <% if has_edit_permission %>
+        <%= link_to l(:button_patch_note_unskip), skip_issue_patch_notes_path(issue), remote: true, method: :post,
+              data: { confirm: l(:text_are_you_sure) }, class: 'icon icon-reload' %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% if has_edit_permission && !skip_note %>
+    <div id="patch-note-actions">
+      <%= link_to l(:button_patch_note_create), new_issue_patch_note_path(issue), remote: true, method: :get,
+            class: 'icon icon-add button' %>
+      <a href="#" onclick="showSkipForm(<%= issue.id %>); return false;" class="icon icon-cancel button-skip">
+        <%= l(:button_patch_note_skip) %>
+      </a>
+    </div>
+
+    <div id="patch-note-skip-form-container" style="display:none;">
+      <%= form_tag skip_issue_patch_notes_path(issue), remote: true, method: :post do %>
+        <div class="patch-note-skip-form">
+          <label for="skip_reason"><%= l(:field_patch_note_skip_reason) %></label>
+          <%= text_field_tag :skip_reason, '', class: 'full-width', placeholder: l(:text_patch_note_skip_placeholder) %>
+          <div class="patch-note-form-actions">
+            <%= submit_tag l(:button_save), class: 'button' %>
+            <a href="#" onclick="hideSkipForm(); return false;" class="button button-cancel"><%= l(:button_cancel) %></a>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div id="patch-note-form-container"></div>
+</div>

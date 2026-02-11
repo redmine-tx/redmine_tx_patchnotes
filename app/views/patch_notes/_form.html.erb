@@ -1,0 +1,42 @@
+<%
+  is_new = patch_note.new_record?
+  url = is_new ? issue_patch_notes_path(issue) : patch_note_path(patch_note)
+  method = is_new ? :post : :put
+%>
+
+<%= form_for patch_note, url: url, remote: true, html: { method: method, class: 'patch-note-form' } do |f| %>
+  <% if patch_note.errors.any? %>
+    <div class="flash error">
+      <ul>
+        <% patch_note.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <p>
+    <label for="patch_note_part"><%= l(:field_patch_note_part) %></label>
+    <%= f.select :part, (1..10).map { |i| ["Part ##{i}", i] }, {}, class: 'small' %>
+  </p>
+
+  <p>
+    <label for="patch_note_content"><%= l(:field_patch_note_content) %></label>
+    <%= f.text_area :content, class: 'wiki-edit', rows: 10, id: "patch_note_content_#{patch_note.id || 'new'}" %>
+    <%= wikitoolbar_for("patch_note_content_#{patch_note.id || 'new'}") %>
+  </p>
+
+  <p>
+    <%= f.check_box :is_internal %>
+    <label for="patch_note_is_internal" class="inline"><%= l(:field_patch_note_is_internal) %></label>
+  </p>
+
+  <p>
+    <%= f.submit l(:button_save), class: 'button' %>
+    <% if is_new %>
+      <a href="#" onclick="cancelPatchNoteForm(); return false;" class="button button-cancel"><%= l(:button_cancel) %></a>
+    <% else %>
+      <a href="#" onclick="cancelEditPatchNote(<%= patch_note.id %>); return false;" class="button button-cancel"><%= l(:button_cancel) %></a>
+    <% end %>
+  </p>
+<% end %>
