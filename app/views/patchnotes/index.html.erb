@@ -3,72 +3,10 @@
     <%= javascript_include_tag 'context_menu' %>
     <%= stylesheet_link_tag 'scm' %>
     <%= stylesheet_link_tag 'wiki' %>
+    <%= stylesheet_link_tag 'patch_notes', plugin: 'redmine_tx_patchnotes' %>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <%= javascript_include_tag 'patchnotes_index', plugin: 'redmine_tx_patchnotes' %>
 <% end %>
-
-<style>
-    .version-box {
-        border: 1px solid #999;
-        padding: 10px;
-        margin: 10px;
-        border-radius: 8px;
-    }
-    .note-item {
-        margin-bottom: 10px;
-    }
-    .note-item-title {
-        font-size: 1.2em;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-    .note-item-content {
-        opacity: 0.6;
-    }
-
-    /* 컨텐츠 탭 스타일 수정 */
-    .content-tabs {
-        margin: 20px 0;
-    }
-
-    .content-tabs ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        border-bottom: 1px solid #ccc;
-        height: auto;  /* 기존 Redmine 탭의 height 설정 제거 */
-    }
-
-    .content-tabs li {
-        display: inline-block;
-        margin-right: 5px;
-        float: none;  /* 기존 Redmine 탭의 float 제거 */
-    }
-
-    .content-tabs a {
-        display: inline-block;
-        padding: 8px 15px;
-        text-decoration: none;
-        border: 1px solid #ccc;
-        border-radius: 3px 3px 0 0;
-        background-color: #f6f6f6;
-        margin-bottom: -1px;
-    }
-
-    .content-tabs a.active {
-        background: #fff;
-        border-bottom-color: #fff;
-        color: #555;
-    }
-
-    /* 탭 컨텐츠 스타일 */
-    .tab-content > div {
-        display: none;
-    }
-    
-    .tab-content > div.active {
-        display: block;
-    }
-</style>
 
 <div class="tabs" style="height: 48px;">
     <ul>
@@ -78,68 +16,72 @@
     </ul>
 </div>
 
-<div class="content-tabs">
+<% active_tab = params[:tab] || '1' %>
+<% total_notes = @public_notes.count + @internal_notes.count %>
+
+<div class="pn-content-tabs" data-version-name="<%= @selected_version.name %>">
     <ul>
-        <li><a href="?version_id=<%= @selected_version.id %>&tab=1" class="tab-link <%= params[:tab].nil? || params[:tab] == '1' ? 'active' : '' %>" data-tab="inner-tab-1">패치노트 (공개: <%= @public_notes.count %> / 내부: <%= @internal_notes.count %>)</a></li>
-        <li><a href="?version_id=<%= @selected_version.id %>&tab=2" class="tab-link <%= params[:tab] == '2' ? 'active' : '' %>" data-tab="inner-tab-2">패치노트 작성 완료 일감 (<%= @issues_patch_note_complete.count %>)</a></li>
-        <li><a href="?version_id=<%= @selected_version.id %>&tab=3" class="tab-link <%= params[:tab] == '3' ? 'active' : '' %>" data-tab="inner-tab-3">패치노트 작성 예외 일감 (<%= @no_patch_note_issues.count %>)</a></li>
-        <li><a href="?version_id=<%= @selected_version.id %>&tab=4" class="tab-link <%= params[:tab] == '4' ? 'active' : '' %>" data-tab="inner-tab-4">패치노트 누락 일감 (<%= @issues_need_patch_notes.count %>)</a></li>
-        <li><a href="?version_id=<%= @selected_version.id %>&tab=5" class="tab-link <%= params[:tab] == '5' ? 'active' : '' %>" data-tab="inner-tab-5">패치노트 기재 없이 완료 처리된 일감 (<%= @issues_complete_without_patch_notes.count %>)</a></li>
+        <li>
+            <a href="#" class="tab-link <%= active_tab == '1' ? 'active' : '' %>" data-tab="inner-tab-1">
+                패치노트
+                <span class="<%= tab_count_class(total_notes, :notes) %>"><%= total_notes %></span>
+            </a>
+        </li>
+        <li>
+            <a href="#" class="tab-link <%= active_tab == '2' ? 'active' : '' %>" data-tab="inner-tab-2">
+                작성 완료
+                <span class="<%= tab_count_class(@issues_patch_note_complete.count, :complete) %>"><%= @issues_patch_note_complete.count %></span>
+            </a>
+        </li>
+        <li>
+            <a href="#" class="tab-link <%= active_tab == '3' ? 'active' : '' %>" data-tab="inner-tab-3">
+                예외
+                <span class="<%= tab_count_class(@no_patch_note_issues.count, :exception) %>"><%= @no_patch_note_issues.count %></span>
+            </a>
+        </li>
+        <li>
+            <a href="#" class="tab-link <%= active_tab == '4' ? 'active' : '' %>" data-tab="inner-tab-4">
+                누락
+                <span class="<%= tab_count_class(@issues_need_patch_notes.count, :missing) %>"><%= @issues_need_patch_notes.count %></span>
+            </a>
+        </li>
+        <li>
+            <a href="#" class="tab-link <%= active_tab == '5' ? 'active' : '' %>" data-tab="inner-tab-5">
+                미기재 완료
+                <span class="<%= tab_count_class(@issues_complete_without_patch_notes.count, :warning) %>"><%= @issues_complete_without_patch_notes.count %></span>
+            </a>
+        </li>
     </ul>
 </div>
 
-<%
-    def render_issues_list(issues, project)
-        query = IssueQuery.new(name: '패치노트 누락 일감')
-        query.project = project
-        query.column_names = [:id, :tracker,:status, :priority, :subject, :assigned_to, :done_ratio, :due_date]
-        query.sort_criteria = params[:sort] if params[:sort].present?
-        
-        render partial: 'issues/list', 
-            locals: { 
-                query: query, 
-                issues: issues, 
-                context_menu: true
-            }
-    end
-%>
+<div>
+    <%# === Tab 1: Patch Notes === %>
+    <div id="inner-tab-1" class="tab-panel <%= active_tab == '1' ? 'active' : '' %>">
 
-<div class="tab-content">
-    <% if params[:tab].nil? || params[:tab] == '1' %>
+        <% if @public_notes.empty? && @internal_notes.empty? %>
+            <div class="pn-empty-state">
+                <span class="pn-empty-state-icon">&#128196;</span>
+                이 버전에 작성된 패치노트가 없습니다.
+            </div>
+        <% end %>
 
-        <div class="inner-tab-1 active">
-
-        <!-- 공개용 패치노트 -->
         <% if @public_notes.any? %>
-            <h2 style="margin-top: 20px; margin-bottom: 10px; color: #169; border-bottom: 2px solid #169; padding-bottom: 5px;">
-                📢 공개용 패치노트
-            </h2>
+            <h2 class="pn-section-header--public">공개용 패치노트 (<%= @public_notes.count %>)</h2>
 
             <% @public_notes_by_part.each do |part, notes| %>
-
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="margin: 0;">패치노트 #<%= part %></h3>
-                    <div style="display: flex; gap: 10px;">
-                        <a href="#" onclick="exportPatchNotesToExcel(<%= part %>, 'public'); return false;" class="icon icon-download button">
-                            엑셀 다운로드
-                        </a>
-                        <a href="#" onclick="copyPatchNotes(<%= part %>, 'public'); return false;" class="icon icon-copy button">
-                            클립보드에 복사하기
-                        </a>
+                <div class="pn-part-header">
+                    <h3 class="pn-part-title">Part #<%= part %></h3>
+                    <div class="pn-part-actions">
+                        <a href="#" onclick="exportPatchNotesToExcel(<%= part %>, 'public'); return false;" class="icon icon-download button">엑셀</a>
+                        <a href="#" onclick="copyPatchNotes(<%= part %>, 'public'); return false;" class="icon icon-copy button">복사</a>
                     </div>
                 </div>
                 <div class="version-box">
                     <ul class="patch-notes-list-public-<%= part %>" id="patch-notes-list-public-<%= part %>">
                         <% notes.each do |note| %>
-                            <%
-                                worker_name = if note[:issue].worker_id.present?
-                                    u = User.where(id: note[:issue].worker_id).first
-                                    u.present? ? u.name : note[:issue].assigned_to.name
-                                else
-                                    note[:issue].assigned_to.name
-                                end
-                            %>
+                            <% worker_name = resolve_worker_name(note[:issue], @worker_users_map) %>
                             <li class="note-item"
+                                style="border-left-color: <%= tracker_color(note[:issue].tracker.name) %>;"
                                 data-issue-id="<%= note[:issue].id %>"
                                 data-issue-url="<%= issue_url(note[:issue]) %>"
                                 data-tracker="<%= note[:issue].tracker.name %>"
@@ -147,10 +89,16 @@
                                 data-status="<%= note[:issue].status.name %>"
                                 data-priority="<%= note[:issue].priority.name %>"
                                 data-done-ratio="<%= note[:issue].done_ratio %>"
-                                data-assignee="<%= worker_name.gsub(/ /, '') %>">
-                                <strong class="note-item-title">
-                                    <%= note[:issue].subject %> <%= link_to "#" + note[:issue].id.to_s, issue_path(note[:issue]) %>
-                                </strong> <span style="font-size: 0.8em; color: #666;">(담당자: <%= worker_name.gsub(/ /, '') %>)</span>
+                                data-assignee="<%= worker_name %>">
+                                <div class="note-item-header">
+                                    <span class="pn-tracker-badge" style="background-color: <%= tracker_color(note[:issue].tracker.name) %>;"><%= note[:issue].tracker.name %></span>
+                                    <strong class="note-item-title">
+                                        <%= note[:issue].subject %> <%= link_to "##{note[:issue].id}", issue_path(note[:issue]) %>
+                                    </strong>
+                                    <% if worker_name.present? %>
+                                        <span class="pn-assignee-tag"><%= worker_name %></span>
+                                    <% end %>
+                                </div>
                                 <div class="note-item-content wiki">
                                     <%= textilizable(note[:notes], :object => note[:issue]) %>
                                 </div>
@@ -158,44 +106,27 @@
                         <% end %>
                     </ul>
                 </div>
-
             <% end %>
         <% end %>
 
-        <!-- 내부 참조용 패치노트 -->
         <% if @internal_notes.any? %>
-            <h2 style="margin-top: 40px; margin-bottom: 10px; color: #d63; border-bottom: 2px solid #d63; padding-bottom: 5px;">
-                🔒 내부 참조용 패치노트 (운영자 전용)
-            </h2>
-            <p style="background: #fff3cd; border: 1px solid #ffc107; padding: 10px; border-radius: 4px; color: #856404; margin-bottom: 15px;">
-                ⚠️ 이 섹션의 패치노트는 유저 공개용 패치노트에 포함되지 않습니다.
-            </p>
+            <h2 class="pn-section-header--internal">내부 참조용 패치노트 (<%= @internal_notes.count %>)</h2>
+            <p class="pn-internal-warning">이 섹션의 패치노트는 유저 공개용 패치노트에 포함되지 않습니다.</p>
 
             <% @internal_notes_by_part.each do |part, notes| %>
-
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="margin: 0;">내부 패치노트 #<%= part %></h3>
-                    <div style="display: flex; gap: 10px;">
-                        <a href="#" onclick="exportPatchNotesToExcel(<%= part %>, 'internal'); return false;" class="icon icon-download button">
-                            엑셀 다운로드
-                        </a>
-                        <a href="#" onclick="copyPatchNotes(<%= part %>, 'internal'); return false;" class="icon icon-copy button">
-                            클립보드에 복사하기
-                        </a>
+                <div class="pn-part-header">
+                    <h3 class="pn-part-title">내부 Part #<%= part %></h3>
+                    <div class="pn-part-actions">
+                        <a href="#" onclick="exportPatchNotesToExcel(<%= part %>, 'internal'); return false;" class="icon icon-download button">엑셀</a>
+                        <a href="#" onclick="copyPatchNotes(<%= part %>, 'internal'); return false;" class="icon icon-copy button">복사</a>
                     </div>
                 </div>
-                <div class="version-box" style="border-color: #d63;">
+                <div class="version-box version-box--internal">
                     <ul class="patch-notes-list-internal-<%= part %>" id="patch-notes-list-internal-<%= part %>">
                         <% notes.each do |note| %>
-                            <%
-                                worker_name = if note[:issue].worker_id.present?
-                                    u = User.where(id: note[:issue].worker_id).first
-                                    u.present? ? u.name : note[:issue].assigned_to.name
-                                else
-                                    note[:issue].assigned_to.name
-                                end
-                            %>
+                            <% worker_name = resolve_worker_name(note[:issue], @worker_users_map) %>
                             <li class="note-item"
+                                style="border-left-color: <%= tracker_color(note[:issue].tracker.name) %>;"
                                 data-issue-id="<%= note[:issue].id %>"
                                 data-issue-url="<%= issue_url(note[:issue]) %>"
                                 data-tracker="<%= note[:issue].tracker.name %>"
@@ -203,10 +134,16 @@
                                 data-status="<%= note[:issue].status.name %>"
                                 data-priority="<%= note[:issue].priority.name %>"
                                 data-done-ratio="<%= note[:issue].done_ratio %>"
-                                data-assignee="<%= worker_name.gsub(/ /, '') %>">
-                                <strong class="note-item-title">
-                                    <%= note[:issue].subject %> <%= link_to "#" + note[:issue].id.to_s, issue_path(note[:issue]) %>
-                                </strong> <span style="font-size: 0.8em; color: #666;">(담당자: <%= worker_name.gsub(/ /, '') %>)</span>
+                                data-assignee="<%= worker_name %>">
+                                <div class="note-item-header">
+                                    <span class="pn-tracker-badge" style="background-color: <%= tracker_color(note[:issue].tracker.name) %>;"><%= note[:issue].tracker.name %></span>
+                                    <strong class="note-item-title">
+                                        <%= note[:issue].subject %> <%= link_to "##{note[:issue].id}", issue_path(note[:issue]) %>
+                                    </strong>
+                                    <% if worker_name.present? %>
+                                        <span class="pn-assignee-tag"><%= worker_name %></span>
+                                    <% end %>
+                                </div>
                                 <div class="note-item-content wiki">
                                     <%= textilizable(note[:notes], :object => note[:issue]) %>
                                 </div>
@@ -214,290 +151,70 @@
                         <% end %>
                     </ul>
                 </div>
-
             <% end %>
         <% end %>
 
-        </div>
-    <% end %>
+    </div>
 
-    <% if params[:tab] == '2' %>
-        <div class="inner-tab-2 active">
-            <h3>패치노트 작성 완료 일감</h3>
+    <%# === Tab 2: Issues with patch notes complete === %>
+    <div id="inner-tab-2" class="tab-panel <%= active_tab == '2' ? 'active' : '' %>">
+        <h3>패치노트 작성 완료 일감</h3>
+        <% if @issues_patch_note_complete.any? %>
             <div class="version-box">
                 <%= render_issues_list(@issues_patch_note_complete, @project) %>
             </div>
-        </div>
-    <% end %>
+        <% else %>
+            <div class="pn-empty-state">
+                <span class="pn-empty-state-icon">&#9989;</span>
+                패치노트 작성이 완료된 일감이 없습니다.
+            </div>
+        <% end %>
+    </div>
 
-    <% if params[:tab] == '3' %>
-        <div class="inner-tab-3 active">
-            <h3>패치노트 작성 예외 일감</h3>
+    <%# === Tab 3: Issues excluded from patch notes === %>
+    <div id="inner-tab-3" class="tab-panel <%= active_tab == '3' ? 'active' : '' %>">
+        <h3>패치노트 작성 예외 일감</h3>
+        <% if @no_patch_note_issues.any? %>
             <div class="version-box">
                 <%= render_issues_list(@no_patch_note_issues, @project) %>
             </div>
-        </div>
-    <% end %>
+        <% else %>
+            <div class="pn-empty-state">
+                <span class="pn-empty-state-icon">&#128683;</span>
+                패치노트 작성 예외 처리된 일감이 없습니다.
+            </div>
+        <% end %>
+    </div>
 
-    <% if params[:tab] == '4' %>
-        <div class="inner-tab-4 active">
-            <h3>패치노트 누락 일감</h3>
+    <%# === Tab 4: Issues missing patch notes === %>
+    <div id="inner-tab-4" class="tab-panel <%= active_tab == '4' ? 'active' : '' %>">
+        <h3>패치노트 누락 일감</h3>
+        <% if @issues_need_patch_notes.any? %>
             <div class="version-box">
                 <%= render_issues_list(@issues_need_patch_notes, @project) %>
             </div>
-        </div>
-    <% end %>
+        <% else %>
+            <div class="pn-empty-state">
+                <span class="pn-empty-state-icon">&#127881;</span>
+                모든 일감의 패치노트가 작성되었습니다.
+            </div>
+        <% end %>
+    </div>
 
-    <% if params[:tab] == '5' %>
-        <div class="inner-tab-5 active">
-            <h3>패치노트 기재 없이 완료 처리된 일감</h3>
+    <%# === Tab 5: Completed without patch notes === %>
+    <div id="inner-tab-5" class="tab-panel <%= active_tab == '5' ? 'active' : '' %>">
+        <h3>패치노트 기재 없이 완료 처리된 일감</h3>
+        <% if @issues_complete_without_patch_notes.any? %>
             <div class="version-box">
                 <%= render_issues_list(@issues_complete_without_patch_notes, @project) %>
             </div>
-        </div>
-    <% end %>
+        <% else %>
+            <div class="pn-empty-state">
+                <span class="pn-empty-state-icon">&#128077;</span>
+                패치노트 없이 완료된 일감이 없습니다.
+            </div>
+        <% end %>
+    </div>
 </div>
 
 <%= context_menu %>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const tabLinks = document.querySelectorAll('.tab-link');
-
-    tabLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            // 탭 클릭 시 페이지 이동이 되므로 이벤트 처리는 제거
-            // e.preventDefault();
-            // ... 기존 탭 전환 코드 제거 ...
-        });
-    });
-});
-
-// HTML을 Plain Text로 변환하는 함수
-function htmlToPlainText(html) {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-
-    // 줄바꿈 처리: <br>, <p>, <div> 등을 줄바꿈으로 변환
-    tempDiv.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
-    tempDiv.querySelectorAll('p, div, li').forEach(el => {
-        el.appendChild(document.createTextNode('\n'));
-    });
-
-    // 텍스트만 추출
-    return tempDiv.textContent || tempDiv.innerText || '';
-}
-
-// 엑셀 다운로드 함수
-async function exportPatchNotesToExcel(part = 1, type = 'public') {
-    const listId = type === 'internal' ?
-        'patch-notes-list-internal-' + part :
-        'patch-notes-list-public-' + part;
-    const patchNotesList = document.getElementById(listId);
-
-    if (!patchNotesList) {
-        alert('패치노트 목록을 찾을 수 없습니다.');
-        return;
-    }
-
-    try {
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('패치노트');
-
-        // 헤더 설정
-        worksheet.columns = [
-            { header: 'ID', key: 'id', width: 10 },
-            { header: '유형', key: 'tracker', width: 12 },
-            { header: '범주', key: 'category', width: 15 },
-            { header: '제목', key: 'subject', width: 40 },
-            { header: '디테일', key: 'detail', width: 60 },
-            { header: '담당자', key: 'assignee', width: 15 },
-            { header: '상태', key: 'status', width: 12 },
-            { header: '우선순위', key: 'priority', width: 12 },
-            { header: '진행율', key: 'done_ratio', width: 10 }
-        ];
-
-        // 헤더 스타일 설정
-        worksheet.getRow(1).font = { bold: true };
-        worksheet.getRow(1).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFE0E0E0' }
-        };
-
-        // 각 패치노트 항목 추가
-        const items = patchNotesList.getElementsByClassName('note-item');
-        Array.from(items).forEach((item, index) => {
-            const titleElement = item.querySelector('.note-item-title');
-            const contentElement = item.querySelector('.note-item-content');
-
-            // data attribute에서 정보 가져오기
-            const issueId = item.dataset.issueId || '';
-            const issueUrl = item.dataset.issueUrl || '';
-            const tracker = item.dataset.tracker || '';
-            const category = item.dataset.category || '';
-            const status = item.dataset.status || '';
-            const priority = item.dataset.priority || '';
-            const doneRatio = item.dataset.doneRatio || '0';
-            const assignee = item.dataset.assignee || '';
-
-            // 제목 추출 (일감 번호와 담당자 정보 제외)
-            const titleText = titleElement.textContent.trim();
-            const subject = titleText
-                .replace(/#\d+/, '')  // #숫자 제거
-                .replace(/\(담당자:.*?\)/, '')  // 담당자 정보 제거
-                .trim();
-
-            // HTML을 Plain Text로 변환
-            const detail = htmlToPlainText(contentElement.innerHTML);
-
-            // 행 추가
-            const row = worksheet.addRow({
-                id: issueId,
-                tracker: tracker,
-                category: category,
-                subject: subject,
-                detail: detail.trim(),
-                assignee: assignee,
-                status: status,
-                priority: priority,
-                done_ratio: doneRatio + '%'
-            });
-
-            // ID 컬럼에 하이퍼링크 추가
-            if (issueUrl) {
-                row.getCell('id').value = {
-                    text: issueId,
-                    hyperlink: issueUrl,
-                    tooltip: '일감 보기'
-                };
-                row.getCell('id').font = { color: { argb: 'FF0066CC' }, underline: true };
-            }
-
-            // 디테일 셀 줄바꿈 설정
-            row.getCell('detail').alignment = { wrapText: true, vertical: 'top' };
-
-            // 모든 셀 세로 정렬을 상단으로
-            row.eachCell((cell) => {
-                if (!cell.alignment) cell.alignment = {};
-                cell.alignment.vertical = 'top';
-            });
-        });
-
-        // 파일명 생성
-        const versionName = '<%= @selected_version.name %>';
-        const typeLabel = type === 'internal' ? '내부용' : '공개용';
-        const fileName = `패치노트_${versionName}_Part${part}_${typeLabel}.xlsx`;
-
-        // 엑셀 파일 생성 및 다운로드
-        const buffer = await workbook.xlsx.writeBuffer();
-        const blob = new Blob([buffer], {
-            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
-
-        alert('엑셀 파일이 다운로드되었습니다.');
-    } catch (error) {
-        console.error('엑셀 생성 실패:', error);
-        alert('엑셀 생성 중 오류가 발생했습니다: ' + error.message);
-    }
-}
-
-function copyPatchNotes(part = 1, type = 'public') {
-    const listId = type === 'internal' ?
-        'patch-notes-list-internal-' + part :
-        'patch-notes-list-public-' + part;
-    const patchNotesList = document.getElementById(listId);
-
-    if (!patchNotesList) {
-        alert('패치노트 목록을 찾을 수 없습니다.');
-        return;
-    }
-
-    const items = patchNotesList.getElementsByClassName('note-item');
-    
-    // 임시 div 생성
-    const tempDiv = document.createElement('div');
-    tempDiv.style.position = 'fixed';
-    tempDiv.style.opacity = '0';
-    tempDiv.style.pointerEvents = 'none';
-    
-    // 이미지를 데이터 URL로 변환하는 함수
-    async function convertImageToDataURL(imgUrl) {
-        try {
-            const response = await fetch(imgUrl);
-            const blob = await response.blob();
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.readAsDataURL(blob);
-            });
-        } catch (err) {
-            console.error('이미지 변환 실패:', err);
-            return imgUrl;
-        }
-    }
-
-    // 각 항목의 HTML을 복사
-    Promise.all(Array.from(items).map(async item => {
-        const title = item.querySelector('.note-item-title').innerHTML;
-        let content = item.querySelector('.note-item-content').innerHTML;
-        
-        // 이미지 URL을 절대 경로로 변환하고 데이터 URL로 변환
-        const imgRegex = /<img[^>]+src="([^"]+)"[^>]*>/g;
-        const imgPromises = [];
-        content = content.replace(imgRegex, (match, src) => {
-            const absoluteSrc = src.startsWith('http') ? src : `${window.location.origin}${src}`;
-            imgPromises.push(
-                convertImageToDataURL(absoluteSrc).then(dataUrl => {
-                    return match.replace(src, dataUrl);
-                })
-            );
-            return match;
-        });
-
-        // 모든 이미지 변환이 완료될 때까지 대기
-        if (imgPromises.length > 0) {
-            const results = await Promise.all(imgPromises);
-            results.forEach((replacedImg, index) => {
-                content = content.replace(imgRegex, (match, src) => {
-                    if (index === 0) return replacedImg;
-                    return match;
-                });
-            });
-        }
-        
-        return `<div class="note-item">
-            <strong class="note-item-title">${title}</strong>
-            <div class="note-item-content">${content}</div>
-        </div>`;
-    })).then(htmlContents => {
-        tempDiv.innerHTML = htmlContents.join('');
-        document.body.appendChild(tempDiv);
-        
-        // HTML 선택 및 복사
-        const range = document.createRange();
-        range.selectNode(tempDiv);
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-        
-        try {
-            document.execCommand('copy');
-            alert('패치노트가 클립보드에 복사되었습니다.');
-        } catch (err) {
-            console.error('클립보드 복사 실패:', err);
-            alert('클립보드 복사에 실패했습니다.');
-        }
-        
-        // 임시 요소 제거
-        selection.removeAllRanges();
-        document.body.removeChild(tempDiv);
-    });
-}
-</script>

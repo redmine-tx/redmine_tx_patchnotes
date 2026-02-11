@@ -5,6 +5,7 @@ class PatchnotesController < ApplicationController
     helper :queries
     helper :sort
     helper :issues
+    helper :patchnotes
       
       layout 'base'
       before_action :require_login
@@ -94,6 +95,8 @@ class PatchnotesController < ApplicationController
         @internal_notes = notes.select { |n| n[:is_internal] }
 
         @notes = notes
+        worker_ids = notes.map { |n| n[:issue].respond_to?(:worker_id) ? n[:issue].worker_id : nil }.compact.uniq
+        @worker_users_map = worker_ids.any? ? User.where(id: worker_ids).index_by(&:id) : {}
         @issues = issues
         @issues_patch_note_complete = issues_patch_note_complete
         @issues_need_patch_notes = issues_need_patch_notes
