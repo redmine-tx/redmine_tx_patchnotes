@@ -15,14 +15,10 @@
     </div>
   <% end %>
 
-  <% if Setting[:plugin_redmine_tx_patchnotes][:allow_multiple_parts].to_s == '1' %>
-    <p>
-      <label for="patch_note_part"><%= l(:field_patch_note_part) %></label>
-      <%= f.select :part, (1..10).map { |i| ["Part ##{i}", i] }, {}, class: 'small' %>
-    </p>
-  <% else %>
-    <%= f.hidden_field :part, value: 1 %>
-  <% end %>
+  <p>
+    <label for="patch_note_part"><%= l(:field_patch_note_part) %></label>
+    <%= f.select :part, (1..10).map { |i| ["Part ##{i}", i] }, {}, class: 'small' %>
+  </p>
 
   <p>
     <label for="patch_note_content"><%= l(:field_patch_note_content) %></label>

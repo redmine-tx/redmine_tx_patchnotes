@@ -21,9 +21,8 @@ class PatchNoteTextSync
 
     allow_multi = settings[:allow_multiple_parts].to_s == '1'
 
-    # 다중 파트 비허용 시 파트를 1로 고정하고, 이미 활성 노트가 있으면 스킵
+    # 다중 파트 비허용 시 이미 활성 노트가 있으면 스킵 (파트 번호는 유지)
     unless allow_multi
-      patch_info[:part] = 1
       return if PatchNote.for_issue(issue.id).active.exists?
     end
 

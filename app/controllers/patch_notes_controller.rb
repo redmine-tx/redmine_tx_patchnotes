@@ -28,7 +28,6 @@ class PatchNotesController < ApplicationController
     @patch_note.author = User.current
 
     unless allow_multiple_parts?
-      @patch_note.part = 1
       if PatchNote.for_issue(@issue.id).active.exists?
         @patch_note.errors.add(:base, l(:error_patch_note_single_only))
         respond_to do |format|
