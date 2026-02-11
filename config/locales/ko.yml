@@ -27,6 +27,9 @@ ko:
   journal_patch_note_skipped_with_reason: "패치노트 불필요 처리 (사유: %{reason})"
   journal_patch_note_unskipped: "패치노트 불필요 처리 해제"
 
+  label_patch_note_old_content: "이전 내용"
+  label_patch_note_new_content: "변경 내용"
+
   permission_view_patchnotes: "패치노트 보기"
   permission_edit_patchnotes: "패치노트 편집"
   permission_edit_own_patchnotes: "자신의 패치노트 편집"

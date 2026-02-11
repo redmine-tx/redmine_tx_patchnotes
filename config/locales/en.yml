@@ -27,6 +27,9 @@ en:
   journal_patch_note_skipped_with_reason: "Patch note marked as not required (reason: %{reason})"
   journal_patch_note_unskipped: "Patch note skip status removed"
 
+  label_patch_note_old_content: "Before"
+  label_patch_note_new_content: "After"
+
   permission_view_patchnotes: "View patch notes"
   permission_edit_patchnotes: "Edit patch notes"
   permission_edit_own_patchnotes: "Edit own patch notes"

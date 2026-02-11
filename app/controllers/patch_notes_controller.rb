@@ -40,7 +40,8 @@ class PatchNotesController < ApplicationController
 
     respond_to do |format|
       if @patch_note.save
-        log_journal(@issue, l(:journal_patch_note_created, part: @patch_note.part))
+        notes = l(:journal_patch_note_created, part: @patch_note.part) + "\n\n" + format_patch_note_content(@patch_note)
+        log_journal(@issue, notes)
         format.html { redirect_to issue_path(@issue), notice: l(:notice_patch_note_created) }
         format.js
       else
@@ -58,9 +59,12 @@ class PatchNotesController < ApplicationController
   end
 
   def update
+    old_values = { content: @patch_note.content, part: @patch_note.part, is_internal: @patch_note.is_internal }
     respond_to do |format|
       if @patch_note.update(patch_note_params)
-        log_journal(@patch_note.issue, l(:journal_patch_note_updated, part: @patch_note.part))
+        diff = build_update_diff(old_values, @patch_note)
+        notes = l(:journal_patch_note_updated, part: @patch_note.part) + "\n\n" + diff
+        log_journal(@patch_note.issue, notes)
         format.html { redirect_to issue_path(@patch_note.issue), notice: l(:notice_patch_note_updated) }
         format.js
       else
@@ -73,8 +77,9 @@ class PatchNotesController < ApplicationController
   def destroy
     issue = @patch_note.issue
     part = @patch_note.part
+    notes = l(:journal_patch_note_deleted, part: part) + "\n\n" + format_patch_note_content(@patch_note)
     @patch_note.destroy
-    log_journal(issue, l(:journal_patch_note_deleted, part: part))
+    log_journal(issue, notes)
     respond_to do |format|
       format.html { redirect_to issue_path(issue), notice: l(:notice_patch_note_deleted) }
       format.js { @issue = issue }
@@ -160,5 +165,31 @@ class PatchNotesController < ApplicationController
   def log_journal(issue, notes)
     issue.init_journal(User.current, notes)
     issue.save
+  end
+
+  def format_patch_note_content(patch_note)
+    lines = []
+    lines << "<pre>\n#{patch_note.content}\n</pre>"
+    if patch_note.is_internal?
+      lines << "(#{l(:field_patch_note_is_internal)})"
+    end
+    lines.join("\n")
+  end
+
+  def build_update_diff(old_values, patch_note)
+    changes = []
+    if old_values[:part] != patch_note.part
+      changes << "#{l(:field_patch_note_part)}: #{old_values[:part]} → #{patch_note.part}"
+    end
+    if old_values[:is_internal] != patch_note.is_internal
+      old_label = old_values[:is_internal] ? l(:general_text_Yes) : l(:general_text_No)
+      new_label = patch_note.is_internal ? l(:general_text_Yes) : l(:general_text_No)
+      changes << "#{l(:field_patch_note_is_internal)}: #{old_label} → #{new_label}"
+    end
+    if old_values[:content] != patch_note.content
+      changes << "--- #{l(:label_patch_note_old_content)}\n<pre>\n#{old_values[:content]}\n</pre>"
+      changes << "+++ #{l(:label_patch_note_new_content)}\n<pre>\n#{patch_note.content}\n</pre>"
+    end
+    changes.join("\n")
   end
 end
