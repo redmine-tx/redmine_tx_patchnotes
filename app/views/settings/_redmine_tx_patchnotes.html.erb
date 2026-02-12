@@ -2,30 +2,10 @@
   <!-- 제외 설정 그룹 -->
   <div class="section">
     <h3 class="title">보고 제외 설정</h3>
+    <div class="info-box">
+      패치노트 작성이 필요한 일감 유형은 <a href="<%= trackers_path %>">관리 > 일감 유형</a>에서 각 유형의 <strong>패치노트</strong> 속성을 설정하세요.
+    </div>
     <div class="grid">
-      <div class="item">
-        <h3>패치노트 작성이 필요한 일감 유형</h3>
-        <div class="select-wrapper">
-          <%= select_tag('settings_redmine_tx_patchnotes_trackers_on',
-              options_for_select(Tracker.all.order(:name).map { |t| [ t.name, t.id ] },
-                selected: Setting[:plugin_redmine_tx_patchnotes][:e_tracker_on].to_s.tr('[]" ','').split(',').map {|i| i.to_i}),
-              name: 'settings[e_tracker_on][]',
-              multiple: true,
-              id: 'required-trackers-select') %>
-        </div>
-      </div>
-
-      <div class="item">
-        <h3>패치노트 작성에서 제외할 일감 유형 (하위 일감들도 제외됨)</h3>
-        <div class="select-wrapper">
-          <%= select_tag('settings_redmine_tx_patchnotes_trackers_off',
-              options_for_select(Tracker.all.order(:name).map { |t| [ t.name, t.id ] },
-                selected: Setting[:plugin_redmine_tx_patchnotes][:e_tracker_off].to_s.tr('[]" ','').split(',').map {|i| i.to_i}),
-              name: 'settings[e_tracker_off][]',
-              multiple: true) %>
-        </div>
-      </div>
-
       <div class="item">
         <h3>패치노트가 작성 완료된 일감의 상태</h3>
         <div class="select-wrapper">
@@ -104,18 +84,17 @@
         <h3>패치노트 유형 순서</h3>
         <div class="tracker-order-wrapper">
           <div class="tracker-order-list" id="tracker-order-list">
-            <% 
-              required_tracker_ids = Setting[:plugin_redmine_tx_patchnotes][:e_tracker_on].to_s.tr('[]" ','').split(',').map {|i| i.to_i}
+            <%
               tracker_order = Setting[:plugin_redmine_tx_patchnotes][:tracker_order]
               tracker_order = tracker_order.to_s.tr('[]" ','').split(',').map {|i| i.to_i} if tracker_order.present?
               tracker_order = [] if tracker_order.blank?
-              
-              # 패치노트 작성이 필요한 일감 유형만 필터링
-              required_trackers = Tracker.where(id: required_tracker_ids)
-              
-              # 순서가 설정된 트래커들을 먼저 표시 (필요한 트래커만)
-              ordered_trackers = tracker_order.map { |id| required_trackers.find { |t| t.id == id } }.compact
-              remaining_trackers = required_trackers.order(:name) - ordered_trackers
+
+              # is_patchnote 플래그가 설정된 유형만 필터링
+              patchnote_trackers = Tracker.where(is_patchnote: true)
+
+              # 순서가 설정된 트래커들을 먼저 표시
+              ordered_trackers = tracker_order.map { |id| patchnote_trackers.find { |t| t.id == id } }.compact
+              remaining_trackers = patchnote_trackers.order(:name) - ordered_trackers
               all_trackers = ordered_trackers + remaining_trackers
             %>
             
@@ -151,6 +130,21 @@
   color: #2c3e50;
   margin-bottom: 20px;
   border-bottom: 1px solid #eee;
+}
+
+.info-box {
+  background: #f0f7ff;
+  border: 1px solid #b8d4f0;
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin-bottom: 20px;
+  color: #2c5282;
+  font-size: 0.93em;
+}
+
+.info-box a {
+  color: #2b6cb0;
+  font-weight: 500;
 }
 
 .grid {
@@ -238,75 +232,34 @@
 document.addEventListener('DOMContentLoaded', function() {
   const trackerOrderList = document.getElementById('tracker-order-list');
   const trackerOrderInput = document.getElementById('tracker-order-input');
-  const requiredTrackersSelect = document.getElementById('required-trackers-select');
-  
-  // 모든 tracker 정보를 저장 (서버에서 가져옴)
-  const allTrackers = {};
-  <% Tracker.all.each do |tracker| %>
-  allTrackers[<%= tracker.id %>] = '<%= tracker.name %>';
-  <% end %>
-  
+
   // 현재 순서를 input에 저장
   function updateTrackerOrder() {
     const items = trackerOrderList.querySelectorAll('.tracker-order-item');
     const order = Array.from(items).map(item => item.dataset.trackerId);
     trackerOrderInput.value = order.join(',');
   }
-  
-  // 선택된 tracker들로 순서 목록 업데이트
-  function updateTrackerOrderList() {
-    const selectedValues = Array.from(requiredTrackersSelect.selectedOptions).map(option => option.value);
-    const currentOrder = trackerOrderInput.value.split(',').filter(id => id);
-    
-    // 기존 순서 중 선택된 것들만 유지
-    const filteredOrder = currentOrder.filter(id => selectedValues.includes(id));
-    
-    // 새로 선택된 것들을 뒤에 추가
-    const newTrackers = selectedValues.filter(id => !filteredOrder.includes(id));
-    const finalOrder = filteredOrder.concat(newTrackers);
-    
-    // DOM 업데이트
-    trackerOrderList.innerHTML = '';
-    finalOrder.forEach(trackerId => {
-      const trackerItem = document.createElement('div');
-      trackerItem.className = 'tracker-order-item';
-      trackerItem.setAttribute('data-tracker-id', trackerId);
-      trackerItem.setAttribute('draggable', true);
-      trackerItem.innerHTML = `
-        <div class="drag-handle">⋮⋮</div>
-        <span class="tracker-name">${allTrackers[trackerId]}</span>
-      `;
-      trackerOrderList.appendChild(trackerItem);
-    });
-    
-    updateTrackerOrder();
-  }
-  
+
   // 초기 순서 설정
   updateTrackerOrder();
-  
-  // 필요한 tracker 선택 변경 감지
-  requiredTrackersSelect.addEventListener('change', function() {
-    updateTrackerOrderList();
-  });
-  
+
   // 드래그 앤 드롭 기능
   let draggedItem = null;
-  
+
   trackerOrderList.addEventListener('dragstart', function(e) {
     if (e.target.classList.contains('tracker-order-item')) {
       draggedItem = e.target;
       e.target.classList.add('dragging');
     }
   });
-  
+
   trackerOrderList.addEventListener('dragend', function(e) {
     if (e.target.classList.contains('tracker-order-item')) {
       e.target.classList.remove('dragging');
       draggedItem = null;
     }
   });
-  
+
   trackerOrderList.addEventListener('dragover', function(e) {
     e.preventDefault();
     const afterElement = getDragAfterElement(trackerOrderList, e.clientY);
@@ -317,14 +270,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     updateTrackerOrder();
   });
-  
+
   function getDragAfterElement(container, y) {
     const draggableElements = [...container.querySelectorAll('.tracker-order-item:not(.dragging)')];
-    
+
     return draggableElements.reduce((closest, child) => {
       const box = child.getBoundingClientRect();
       const offset = y - box.top - box.height / 2;
-      
+
       if (offset < 0 && offset > closest.offset) {
         return { offset: offset, element: child };
       } else {
@@ -332,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }, { offset: Number.NEGATIVE_INFINITY }).element;
   }
-  
+
   // 모든 tracker-order-item에 draggable 속성 추가
   document.querySelectorAll('.tracker-order-item').forEach(item => {
     item.setAttribute('draggable', true);

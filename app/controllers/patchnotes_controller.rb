@@ -52,25 +52,21 @@ class PatchnotesController < ApplicationController
       end
 
       def process_patchnotes_data
-        config_tracker_on = Setting[:plugin_redmine_tx_patchnotes][:e_tracker_on].to_s.tr('[]" ','').split(',').map {|i| i.to_i}
-        config_tracker_off = Setting[:plugin_redmine_tx_patchnotes][:e_tracker_off].to_s.tr('[]" ','').split(',').map {|i| i.to_i}
+        patchnote_tracker_ids = Tracker.where(is_patchnote: true).pluck(:id)
         config_complete_status = Setting[:plugin_redmine_tx_patchnotes][:complete].to_s.tr('[]" ','').split(',').map {|i| i.to_i}
 
         issues = Issue.where(fixed_version_id: @selected_version.id)
-            .where(tracker_id: config_tracker_on)
+            .where(tracker_id: patchnote_tracker_ids)
             .where.not(status_id: IssueStatus.discarded_ids)
             .to_a
-        issues.reject! { |issue| config_tracker_off.include?(issue.tracker_id) }
 
-        # 상위 부모 체인 검사:
-        # - config_tracker_off 유형의 부모가 있으면 제거
-        # - config_tracker_on 유형의 부모가 있으면 제거 (부모에서 패치노트 기재)
+        # 상위 부모 체인 검사: is_patchnote 유형의 부모가 있으면 제거 (부모에서 패치노트 기재)
         issues.reject! { |issue|
             current = issue
             excluded = false
             while current.parent_id.present?
                 current = current.parent
-                if config_tracker_off.include?(current.tracker_id) || config_tracker_on.include?(current.tracker_id)
+                if Tracker.is_patchnote?(current.tracker_id)
                     excluded = true
                     break
                 end
@@ -90,13 +86,12 @@ class PatchnotesController < ApplicationController
         if Setting[:plugin_redmine_tx_patchnotes][:allow_non_target_tracker].to_s == '1'
             extra_issue_ids = PatchNote.joins(:issue)
                 .where(issues: { fixed_version_id: @selected_version.id })
-                .where.not(issues: { tracker_id: config_tracker_on })
+                .where.not(issues: { tracker_id: patchnote_tracker_ids })
                 .where.not(issues: { status_id: IssueStatus.discarded_ids })
                 .where.not(issue_id: issues.map(&:id))
                 .pluck(:issue_id).uniq
             if extra_issue_ids.any?
                 extra_issues = Issue.where(id: extra_issue_ids).to_a
-                extra_issues.reject! { |issue| config_tracker_off.include?(issue.tracker_id) }
                 issues.concat(extra_issues)
             end
         end

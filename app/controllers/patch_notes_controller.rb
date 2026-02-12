@@ -127,11 +127,10 @@ class PatchNotesController < ApplicationController
     issue_ids = Array(params[:ids]).map(&:to_i).reject(&:zero?)
     render_404 and return if issue_ids.empty?
 
-    settings = Setting[:plugin_redmine_tx_patchnotes]
-    tracker_on_ids = settings[:e_tracker_on].to_s.tr('[]" ', '').split(',').map(&:to_i)
+    patchnote_tracker_ids = Tracker.where(is_patchnote: true).pluck(:id)
 
     issues = Issue.where(id: issue_ids)
-    issues = issues.where(tracker_id: tracker_on_ids) if tracker_on_ids.present?
+    issues = issues.where(tracker_id: patchnote_tracker_ids) if patchnote_tracker_ids.present?
 
     skipped_count = 0
     issues.each do |issue|

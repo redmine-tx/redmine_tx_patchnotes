@@ -1,7 +1,6 @@
 <%
   pn_settings = Setting[:plugin_redmine_tx_patchnotes]
-  config_tracker_on = pn_settings[:e_tracker_on].to_s.tr('[]" ','').split(',').map {|i| i.to_i}
-  is_target_tracker = config_tracker_on.include?(issue.tracker_id)
+  is_target_tracker = Tracker.is_patchnote?(issue.tracker_id)
   allow_non_target = pn_settings[:allow_non_target_tracker].to_s == '1'
   return unless is_target_tracker || allow_non_target
 
