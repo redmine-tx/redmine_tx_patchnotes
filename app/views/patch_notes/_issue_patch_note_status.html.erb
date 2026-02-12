@@ -20,7 +20,7 @@
   <hr />
   <h3 class="patch-notes-header">
     Patch Notes
-    <% if active_notes.any? %>
+    <% if active_notes.size > 1 %>
       <span class="pn-badge pn-badge-success"><%= active_notes.size %></span>
     <% elsif skip_note %>
       <span class="pn-badge pn-badge-skip">SKIP</span>
@@ -36,7 +36,7 @@
           <% if pn.is_internal? %>
             <span class="pn-badge pn-badge-internal">internal</span>
           <% end %>
-          <span class="patch-note-author">Part #<%= pn.part %> · by <%= pn.author.name %> · <%= format_time(pn.updated_at) %></span>
+          <span class="patch-note-author">Part #<%= pn.part %> · <%= pn.created_at == pn.updated_at ? 'by' : 'Edited by' %> <%= pn.author.name %> · <%= format_time(pn.updated_at) %></span>
           <% if has_edit_permission && pn.editable_by?(User.current) %>
             <span class="patch-note-actions-inline">
               <%= link_to l(:button_edit), edit_patch_note_path(pn), remote: true, method: :get, class: 'icon icon-edit' %>

@@ -63,6 +63,7 @@ class PatchNotesController < ApplicationController
 
   def update
     old_values = { content: @patch_note.content, part: @patch_note.part, is_internal: @patch_note.is_internal }
+    @patch_note.author = User.current
     respond_to do |format|
       if @patch_note.update(patch_note_params)
         details = build_update_details(old_values, @patch_note)
@@ -92,7 +93,7 @@ class PatchNotesController < ApplicationController
     # Remove existing active patch notes for this issue first
     existing_skip = PatchNote.for_issue(@issue.id).skipped.first
     if existing_skip
-      existing_skip.update(skip_reason: params[:skip_reason])
+      existing_skip.update(skip_reason: params[:skip_reason], author: User.current)
     else
       PatchNote.create!(
         issue: @issue,
