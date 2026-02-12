@@ -16,3 +16,5 @@ resources :issues do
   end
 end
 resources :patch_notes, only: [:edit, :update, :destroy]
+
+post 'patch_notes/bulk_skip', to: 'patch_notes#bulk_skip', as: 'bulk_skip_patch_notes'

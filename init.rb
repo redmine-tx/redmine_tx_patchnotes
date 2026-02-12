@@ -21,8 +21,8 @@ Redmine::Plugin.register :redmine_tx_patchnotes do
 
   project_module :redmine_tx_patchnotes do
     permission :view_patchnotes, { patchnotes: [:index] }
-    permission :edit_patchnotes, { patch_notes: [:new, :create, :edit, :update, :destroy, :skip, :unskip] }
-    permission :edit_own_patchnotes, { patch_notes: [:new, :create, :edit, :update, :destroy, :skip, :unskip] }
+    permission :edit_patchnotes, { patch_notes: [:new, :create, :edit, :update, :destroy, :skip, :unskip, :bulk_skip] }
+    permission :edit_own_patchnotes, { patch_notes: [:new, :create, :edit, :update, :destroy, :skip, :unskip, :bulk_skip] }
   end
 
   settings :default => {

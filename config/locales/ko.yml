@@ -4,6 +4,7 @@ ko:
   notice_patch_note_deleted: "패치노트가 삭제되었습니다."
   notice_patch_note_skipped: "패치노트 불필요 처리되었습니다."
   notice_patch_note_unskipped: "패치노트 불필요 처리가 해제되었습니다."
+  notice_bulk_patch_note_skipped: "%{count}건의 일감이 패치노트 불필요 처리되었습니다."
 
   button_patch_note_create: "패치노트 작성"
   button_patch_note_skip: "불필요 처리"
@@ -25,6 +26,8 @@ ko:
   label_journal_patch_note_content: "패치노트 내용"
   label_journal_patch_note_internal: "패치노트 내부 참조"
   label_journal_patch_note_skip: "패치노트 불필요"
+
+  label_bulk_skip_patch_notes: "패치 불필요 일감 처리"
 
   permission_view_patchnotes: "패치노트 보기"
   permission_edit_patchnotes: "패치노트 편집"

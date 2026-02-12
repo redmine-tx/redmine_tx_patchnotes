@@ -4,6 +4,7 @@ en:
   notice_patch_note_deleted: "Patch note was successfully deleted."
   notice_patch_note_skipped: "Issue marked as patch note not required."
   notice_patch_note_unskipped: "Patch note skip status removed."
+  notice_bulk_patch_note_skipped: "%{count} issue(s) marked as patch note not required."
 
   button_patch_note_create: "Write Patch Note"
   button_patch_note_skip: "Not Required"
@@ -25,6 +26,8 @@ en:
   label_journal_patch_note_content: "Patch note content"
   label_journal_patch_note_internal: "Patch note internal"
   label_journal_patch_note_skip: "Patch note skip"
+
+  label_bulk_skip_patch_notes: "Mark as patch note not required"
 
   permission_view_patchnotes: "View patch notes"
   permission_edit_patchnotes: "Edit patch notes"

@@ -2,7 +2,7 @@ class PatchNotesController < ApplicationController
   before_action :require_login
   before_action :find_issue, only: [:new, :create, :skip, :unskip]
   before_action :find_patch_note, only: [:edit, :update, :destroy]
-  before_action :authorize_edit
+  before_action :authorize_edit, except: [:bulk_skip]
 
   def new
     unless allow_multiple_parts?
@@ -121,6 +121,35 @@ class PatchNotesController < ApplicationController
       format.html { redirect_to issue_path(@issue), notice: l(:notice_patch_note_unskipped) }
       format.js
     end
+  end
+
+  def bulk_skip
+    issue_ids = Array(params[:ids]).map(&:to_i).reject(&:zero?)
+    render_404 and return if issue_ids.empty?
+
+    settings = Setting[:plugin_redmine_tx_patchnotes]
+    tracker_on_ids = settings[:e_tracker_on].to_s.tr('[]" ', '').split(',').map(&:to_i)
+
+    issues = Issue.where(id: issue_ids)
+    issues = issues.where(tracker_id: tracker_on_ids) if tracker_on_ids.present?
+
+    skipped_count = 0
+    issues.each do |issue|
+      next if PatchNote.for_issue(issue.id).skipped.exists?
+
+      PatchNote.create!(
+        issue_id: issue.id,
+        author: User.current,
+        part: 0,
+        content: '',
+        is_skipped: true
+      )
+      log_journal(issue, [{ property: 'attr', prop_key: 'patch_note_skip', value: l(:general_text_Yes) }])
+      skipped_count += 1
+    end
+
+    flash[:notice] = l(:notice_bulk_patch_note_skipped, count: skipped_count)
+    redirect_back_or_default(home_path)
   end
 
   private

@@ -1,0 +1,5 @@
+<% if User.current.logged? %>
+  <li><%= context_menu_link l(:label_bulk_skip_patch_notes),
+                            bulk_skip_patch_notes_path(:ids => @issue_ids, :back_url => @back),
+                            :method => :post %></li>
+<% end %>

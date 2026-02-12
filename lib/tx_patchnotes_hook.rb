@@ -2,6 +2,9 @@ class TxPatchnotesHook < Redmine::Hook::ViewListener
   render_on :view_issues_show_description_bottom,
             partial: 'patch_notes/issue_patch_note_status'
 
+  render_on :view_issues_context_menu_end,
+            partial: 'context_menus/patch_notes_skip'
+
   # 이슈 생성 시: 본문에 헤더가 있으면 동기화
   def controller_issues_new_after_save(context = {})
     issue = context[:issue]
