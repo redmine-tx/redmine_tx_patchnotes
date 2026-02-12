@@ -22,9 +22,9 @@
     Patch Notes
     <% if active_notes.size > 1 %>
       <span class="pn-badge pn-badge-success"><%= active_notes.size %></span>
-    <% elsif skip_note %>
+    <% elsif active_notes.empty? && skip_note %>
       <span class="pn-badge pn-badge-skip">SKIP</span>
-    <% else %>
+    <% elsif active_notes.empty? %>
       <span class="pn-badge pn-badge-none">-</span>
     <% end %>
   </h3>
