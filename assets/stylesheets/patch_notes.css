@@ -166,8 +166,22 @@
 .pn-section-header--internal { margin-top: 35px; margin-bottom: 15px; color: #d63; border-bottom: 2px solid #d63; padding-bottom: 8px; font-size: 1.15em; }
 
 /* Part Layout */
-.pn-part-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.pn-part-title { margin: 0; font-size: 1.05em; color: #444; }
+.pn-part-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  background: #f0f4f8;
+  padding: 6px 12px;
+  border-left: 3px solid #4a90d9;
+  border-radius: 3px;
+}
+.pn-part-title {
+  margin: 0;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #333;
+}
 .pn-part-actions { display: flex; gap: 8px; }
 
 /* Note Item Card */

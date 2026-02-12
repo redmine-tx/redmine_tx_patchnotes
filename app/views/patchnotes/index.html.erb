@@ -8,8 +8,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
     <%= javascript_include_tag 'patchnotes_index', plugin: 'redmine_tx_patchnotes' %>
 <% end %>
-
-<div class="tabs" style="height: 48px;">
+<style>
+  #content .tabs.tabs-wrap { height: auto; overflow: visible; }
+  #content .tabs.tabs-wrap ul { position: static; min-width: 0; display: flex; flex-wrap: wrap; }
+  #content .tabs.tabs-wrap ul li { margin-bottom: 4px; }
+</style>
+<div class="tabs tabs-wrap">
     <ul>
         <% @versions.each do |version| %>
             <li><%= link_to version.name.to_s, '?version_id=' + version.id.to_s, class: @selected_version.id == version.id ? 'selected' : '' %></li>
@@ -70,12 +74,9 @@
             <h2 class="pn-section-header--public">공개용 패치노트 (<%= @public_notes.count %>)</h2>
 
             <% allow_multi = Setting[:plugin_redmine_tx_patchnotes][:allow_multiple_parts].to_s == '1' %>
-            <% show_part = allow_multi || @public_notes_by_part.size > 1 %>
             <% @public_notes_by_part.each do |part, notes| %>
                 <div class="pn-part-header">
-                    <% if show_part %>
-                        <h3 class="pn-part-title">Part #<%= part %></h3>
-                    <% end %>
+                    <h3 class="pn-part-title">Part <%= part %>/<%= @public_notes_by_part.size %></h3>
                     <div class="pn-part-actions">
                         <a href="#" onclick="exportPatchNotesToPdf(<%= part %>, 'public'); return false;" class="icon icon-download button">PDF</a>
                         <a href="#" onclick="exportPatchNotesToExcel(<%= part %>, 'public'); return false;" class="icon icon-download button">엑셀</a>
@@ -119,12 +120,9 @@
             <h2 class="pn-section-header--internal">내부 참조용 패치노트 (<%= @internal_notes.count %>)</h2>
             <p class="pn-internal-warning">이 섹션의 패치노트는 유저 공개용 패치노트에 포함되지 않습니다.</p>
 
-            <% show_internal_part = allow_multi || @internal_notes_by_part.size > 1 %>
             <% @internal_notes_by_part.each do |part, notes| %>
                 <div class="pn-part-header">
-                    <% if show_internal_part %>
-                        <h3 class="pn-part-title">내부 Part #<%= part %></h3>
-                    <% end %>
+                    <h3 class="pn-part-title">내부 Part <%= part %>/<%= @internal_notes_by_part.size %></h3>
                     <div class="pn-part-actions">
                         <a href="#" onclick="exportPatchNotesToPdf(<%= part %>, 'internal'); return false;" class="icon icon-download button">PDF</a>
                         <a href="#" onclick="exportPatchNotesToExcel(<%= part %>, 'internal'); return false;" class="icon icon-download button">엑셀</a>
