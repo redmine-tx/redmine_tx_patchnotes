@@ -40,8 +40,11 @@ class PatchNotesController < ApplicationController
 
     respond_to do |format|
       if @patch_note.save
-        notes = l(:journal_patch_note_created, part: @patch_note.part) + "\n\n" + format_patch_note_content(@patch_note)
-        log_journal(@issue, notes)
+        details = [{ property: 'attr', prop_key: 'patch_note', value: @patch_note.part.to_s }]
+        if @patch_note.is_internal?
+          details << { property: 'attr', prop_key: 'patch_note_internal', value: l(:general_text_Yes) }
+        end
+        log_journal(@issue, details, format_patch_note_content(@patch_note))
         format.html { redirect_to issue_path(@issue), notice: l(:notice_patch_note_created) }
         format.js
       else
@@ -62,9 +65,8 @@ class PatchNotesController < ApplicationController
     old_values = { content: @patch_note.content, part: @patch_note.part, is_internal: @patch_note.is_internal }
     respond_to do |format|
       if @patch_note.update(patch_note_params)
-        diff = build_update_diff(old_values, @patch_note)
-        notes = l(:journal_patch_note_updated, part: @patch_note.part) + "\n\n" + diff
-        log_journal(@patch_note.issue, notes)
+        details = build_update_details(old_values, @patch_note)
+        log_journal(@patch_note.issue, details) if details.any?
         format.html { redirect_to issue_path(@patch_note.issue), notice: l(:notice_patch_note_updated) }
         format.js
       else
@@ -77,9 +79,9 @@ class PatchNotesController < ApplicationController
   def destroy
     issue = @patch_note.issue
     part = @patch_note.part
-    notes = l(:journal_patch_note_deleted, part: part) + "\n\n" + format_patch_note_content(@patch_note)
+    details = [{ property: 'attr', prop_key: 'patch_note', old_value: part.to_s }]
     @patch_note.destroy
-    log_journal(issue, notes)
+    log_journal(issue, details, format_patch_note_content(@patch_note))
     respond_to do |format|
       format.html { redirect_to issue_path(issue), notice: l(:notice_patch_note_deleted) }
       format.js { @issue = issue }
@@ -102,11 +104,8 @@ class PatchNotesController < ApplicationController
       )
     end
     reason = params[:skip_reason].presence
-    if reason
-      log_journal(@issue, l(:journal_patch_note_skipped_with_reason, reason: reason))
-    else
-      log_journal(@issue, l(:journal_patch_note_skipped))
-    end
+    details = [{ property: 'attr', prop_key: 'patch_note_skip', value: reason || l(:general_text_Yes) }]
+    log_journal(@issue, details)
     respond_to do |format|
       format.html { redirect_to issue_path(@issue), notice: l(:notice_patch_note_skipped) }
       format.js
@@ -115,7 +114,8 @@ class PatchNotesController < ApplicationController
 
   def unskip
     PatchNote.for_issue(@issue.id).skipped.destroy_all
-    log_journal(@issue, l(:journal_patch_note_unskipped))
+    details = [{ property: 'attr', prop_key: 'patch_note_skip', old_value: l(:general_text_Yes) }]
+    log_journal(@issue, details)
     respond_to do |format|
       format.html { redirect_to issue_path(@issue), notice: l(:notice_patch_note_unskipped) }
       format.js
@@ -162,34 +162,31 @@ class PatchNotesController < ApplicationController
     Setting[:plugin_redmine_tx_patchnotes][:allow_multiple_parts].to_s == '1'
   end
 
-  def log_journal(issue, notes)
+  def log_journal(issue, details, notes = '')
     issue.init_journal(User.current, notes)
+    details.each do |detail_attrs|
+      issue.current_journal.details.build(detail_attrs)
+    end
     issue.save
   end
 
   def format_patch_note_content(patch_note)
-    lines = []
-    lines << "<pre>\n#{patch_note.content}\n</pre>"
-    if patch_note.is_internal?
-      lines << "(#{l(:field_patch_note_is_internal)})"
-    end
-    lines.join("\n")
+    "<pre>\n#{patch_note.content}\n</pre>"
   end
 
-  def build_update_diff(old_values, patch_note)
-    changes = []
+  def build_update_details(old_values, patch_note)
+    details = []
     if old_values[:part] != patch_note.part
-      changes << "#{l(:field_patch_note_part)}: #{old_values[:part]} → #{patch_note.part}"
+      details << { property: 'attr', prop_key: 'patch_note_part', old_value: old_values[:part].to_s, value: patch_note.part.to_s }
     end
     if old_values[:is_internal] != patch_note.is_internal
       old_label = old_values[:is_internal] ? l(:general_text_Yes) : l(:general_text_No)
       new_label = patch_note.is_internal ? l(:general_text_Yes) : l(:general_text_No)
-      changes << "#{l(:field_patch_note_is_internal)}: #{old_label} → #{new_label}"
+      details << { property: 'attr', prop_key: 'patch_note_internal', old_value: old_label, value: new_label }
     end
     if old_values[:content] != patch_note.content
-      changes << "--- #{l(:label_patch_note_old_content)}\n<pre>\n#{old_values[:content]}\n</pre>"
-      changes << "+++ #{l(:label_patch_note_new_content)}\n<pre>\n#{patch_note.content}\n</pre>"
+      details << { property: 'attr', prop_key: 'patch_note_content', old_value: old_values[:content], value: patch_note.content }
     end
-    changes.join("\n")
+    details
   end
 end

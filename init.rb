@@ -41,4 +41,5 @@ end
 Rails.application.config.after_initialize do
   require_dependency File.expand_path('../lib/tx_patchnotes_hook', __FILE__)
   require_dependency File.expand_path('../lib/patch_note_text_sync', __FILE__)
+  require_dependency File.expand_path('../lib/redmine_tx_patchnotes/patches/issues_helper_patch', __FILE__)
 end
