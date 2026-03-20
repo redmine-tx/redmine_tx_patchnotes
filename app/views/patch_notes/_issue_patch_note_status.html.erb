@@ -63,7 +63,7 @@
         <% end %>
       </span>
       <% if has_edit_permission %>
-        <%= link_to l(:button_patch_note_unskip), skip_issue_patch_notes_path(issue), remote: true, method: :post,
+        <%= link_to l(:button_patch_note_unskip), unskip_issue_patch_notes_path(issue), remote: true, method: :post,
               data: { confirm: l(:text_are_you_sure) }, class: 'icon icon-reload' %>
       <% end %>
     </div>
