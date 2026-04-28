@@ -163,6 +163,8 @@
 
 /* Patch Note Filters */
 .pn-time-filter {
+  display: block;
+  box-sizing: border-box;
   margin: 12px 0 16px;
   padding: 8px 10px;
   background: #f7f9fb;

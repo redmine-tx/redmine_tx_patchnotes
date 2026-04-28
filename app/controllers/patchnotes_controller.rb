@@ -13,8 +13,6 @@ class PatchnotesController < ApplicationController
       before_action :authorize
 
       def index
-        @patch_note_filter = build_patch_note_filter
-
         @versions = Version.where("effective_date IS NOT NULL").where("effective_date > ?", Date.today - 2.month).open.order(:effective_date).to_a
         if @project
             @versions = @versions.select { |v| v.project_id == @project.id }
@@ -39,6 +37,7 @@ class PatchnotesController < ApplicationController
         end
 
         cached.each { |k, v| instance_variable_set("@#{k}", v) }
+        @patch_note_filter = build_patch_note_filter
         apply_patch_note_filter!
       end
 
@@ -183,8 +182,8 @@ class PatchnotesController < ApplicationController
 
       def build_patch_note_filter
         now = Time.zone.now
-        default_from = Time.zone.local(1970, 1, 1, 0, 0, 0)
         field = PATCH_NOTE_TIME_FIELDS.include?(params[:patch_note_time_field].to_s) ? params[:patch_note_time_field].to_s : 'created_at'
+        default_from = earliest_patch_note_time(field) || now
         from_time = parse_patch_note_time(params[:patch_note_time_from], default_from)
         to_time = parse_patch_note_time(params[:patch_note_time_to], now, end_of_minute: params[:patch_note_time_to].present?)
 
@@ -197,6 +196,10 @@ class PatchnotesController < ApplicationController
             title: params[:patch_note_title].to_s.strip,
             author: params[:patch_note_author].to_s.strip
         }
+      end
+
+      def earliest_patch_note_time(field)
+        @notes.to_a.map { |note| note[field.to_sym] }.compact.min
       end
 
       def parse_patch_note_time(value, fallback, end_of_minute: false)
