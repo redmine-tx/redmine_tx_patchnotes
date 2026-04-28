@@ -204,11 +204,20 @@ async function exportPatchNotesToPdf(part, type) {
         });
 
         clone.querySelectorAll('.note-item-header').forEach(function(header) {
-            header.style.display = 'flex';
-            header.style.alignItems = 'center';
-            header.style.flexWrap = 'wrap';
-            header.style.gap = '8px';
+            header.style.display = 'grid';
+            header.style.gridTemplateColumns = 'minmax(0, 1fr) auto';
+            header.style.alignItems = 'start';
+            header.style.columnGap = '12px';
+            header.style.rowGap = '8px';
             header.style.marginBottom = '6px';
+        });
+
+        clone.querySelectorAll('.note-item-title-row').forEach(function(row) {
+            row.style.display = 'flex';
+            row.style.alignItems = 'center';
+            row.style.flexWrap = 'wrap';
+            row.style.gap = '8px';
+            row.style.minWidth = '0';
         });
 
         clone.querySelectorAll('.pn-tracker-badge').forEach(function(badge) {
@@ -225,12 +234,15 @@ async function exportPatchNotesToPdf(part, type) {
             title.style.fontSize = '1em';
             title.style.fontWeight = '600';
             title.style.color = '#333';
+            title.style.minWidth = '0';
         });
 
         clone.querySelectorAll('.note-item-time-meta').forEach(function(meta) {
             meta.style.color = '#888';
             meta.style.fontSize = '0.78em';
             meta.style.fontWeight = 'normal';
+            meta.style.justifySelf = 'end';
+            meta.style.textAlign = 'right';
             meta.style.whiteSpace = 'nowrap';
         });
 

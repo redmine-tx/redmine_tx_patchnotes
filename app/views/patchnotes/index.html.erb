@@ -134,16 +134,18 @@
                                 data-updated-at="<%= format_time(note[:updated_at]) %>"
                                 data-assignee="<%= worker_name %>">
                                 <div class="note-item-header">
-                                    <span class="pn-tracker-badge" style="background-color: <%= tracker_color(note[:issue].tracker.name) %>;"><%= note[:issue].tracker.name %></span>
-                                    <strong class="note-item-title">
-                                        <%= note[:issue].subject %> <%= link_to "##{note[:issue].id}", issue_path(note[:issue]) %>
-                                    </strong>
+                                    <div class="note-item-title-row">
+                                        <span class="pn-tracker-badge" style="background-color: <%= tracker_color(note[:issue].tracker.name) %>;"><%= note[:issue].tracker.name %></span>
+                                        <strong class="note-item-title">
+                                            <%= note[:issue].subject %> <%= link_to "##{note[:issue].id}", issue_path(note[:issue]) %>
+                                        </strong>
+                                        <% if worker_name.present? %>
+                                            <span class="pn-assignee-tag"><%= worker_name %></span>
+                                        <% end %>
+                                    </div>
                                     <span class="note-item-time-meta">
                                         작성자 <%= note[:author_name] %> · 추가 <%= format_time(note[:created_at]) %> · 수정 <%= format_time(note[:updated_at]) %>
                                     </span>
-                                    <% if worker_name.present? %>
-                                        <span class="pn-assignee-tag"><%= worker_name %></span>
-                                    <% end %>
                                 </div>
                                 <div class="note-item-content wiki">
                                     <%= textilizable(note[:notes], :object => note[:issue]) %>
@@ -186,16 +188,18 @@
                                 data-updated-at="<%= format_time(note[:updated_at]) %>"
                                 data-assignee="<%= worker_name %>">
                                 <div class="note-item-header">
-                                    <span class="pn-tracker-badge" style="background-color: <%= tracker_color(note[:issue].tracker.name) %>;"><%= note[:issue].tracker.name %></span>
-                                    <strong class="note-item-title">
-                                        <%= note[:issue].subject %> <%= link_to "##{note[:issue].id}", issue_path(note[:issue]) %>
-                                    </strong>
+                                    <div class="note-item-title-row">
+                                        <span class="pn-tracker-badge" style="background-color: <%= tracker_color(note[:issue].tracker.name) %>;"><%= note[:issue].tracker.name %></span>
+                                        <strong class="note-item-title">
+                                            <%= note[:issue].subject %> <%= link_to "##{note[:issue].id}", issue_path(note[:issue]) %>
+                                        </strong>
+                                        <% if worker_name.present? %>
+                                            <span class="pn-assignee-tag"><%= worker_name %></span>
+                                        <% end %>
+                                    </div>
                                     <span class="note-item-time-meta">
                                         작성자 <%= note[:author_name] %> · 추가 <%= format_time(note[:created_at]) %> · 수정 <%= format_time(note[:updated_at]) %>
                                     </span>
-                                    <% if worker_name.present? %>
-                                        <span class="pn-assignee-tag"><%= worker_name %></span>
-                                    <% end %>
                                 </div>
                                 <div class="note-item-content wiki">
                                     <%= textilizable(note[:notes], :object => note[:issue]) %>
