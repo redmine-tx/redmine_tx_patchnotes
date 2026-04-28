@@ -56,6 +56,9 @@ async function exportPatchNotesToExcel(part, type) {
             { header: '유형', key: 'tracker', width: 12 },
             { header: '범주', key: 'category', width: 15 },
             { header: '제목', key: 'subject', width: 40 },
+            { header: '패치노트 작성자', key: 'author', width: 16 },
+            { header: '패치노트 추가시각', key: 'created_at', width: 20 },
+            { header: '패치노트 수정시각', key: 'updated_at', width: 20 },
             { header: '디테일', key: 'detail', width: 60 },
             { header: '담당자', key: 'assignee', width: 15 },
             { header: '상태', key: 'status', width: 12 },
@@ -83,6 +86,9 @@ async function exportPatchNotesToExcel(part, type) {
             var priority = item.dataset.priority || '';
             var doneRatio = item.dataset.doneRatio || '0';
             var assignee = item.dataset.assignee || '';
+            var author = item.dataset.author || '';
+            var createdAt = item.dataset.createdAt || '';
+            var updatedAt = item.dataset.updatedAt || '';
 
             var titleText = titleElement.textContent.trim();
             var subject = titleText
@@ -97,6 +103,9 @@ async function exportPatchNotesToExcel(part, type) {
                 tracker: tracker,
                 category: category,
                 subject: subject,
+                author: author,
+                created_at: createdAt,
+                updated_at: updatedAt,
                 detail: detail.trim(),
                 assignee: assignee,
                 status: status,
@@ -216,6 +225,13 @@ async function exportPatchNotesToPdf(part, type) {
             title.style.fontSize = '1em';
             title.style.fontWeight = '600';
             title.style.color = '#333';
+        });
+
+        clone.querySelectorAll('.note-item-time-meta').forEach(function(meta) {
+            meta.style.color = '#888';
+            meta.style.fontSize = '0.78em';
+            meta.style.fontWeight = 'normal';
+            meta.style.whiteSpace = 'nowrap';
         });
 
         clone.querySelectorAll('.pn-assignee-tag').forEach(function(tag) {

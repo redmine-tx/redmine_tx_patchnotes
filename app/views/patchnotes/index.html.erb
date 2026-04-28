@@ -62,11 +62,44 @@
 <div>
     <%# === Tab 1: Patch Notes === %>
     <div id="inner-tab-1" class="tab-panel <%= active_tab == '1' ? 'active' : '' %>">
+        <% reset_filter_params = request.query_parameters.except('patch_note_time_field', 'patch_note_time_from', 'patch_note_time_to', 'patch_note_title', 'patch_note_author').merge('version_id' => @selected_version.id, 'tab' => '1') %>
+        <%= form_tag(request.path, method: :get, class: 'pn-time-filter') do %>
+            <%= hidden_field_tag :version_id, @selected_version.id %>
+            <%= hidden_field_tag :tab, '1' %>
+            <div class="pn-time-filter-row">
+                <label class="pn-time-filter-field pn-time-filter-field--text">
+                    <span>제목</span>
+                    <%= text_field_tag :patch_note_title, @patch_note_filter[:title], placeholder: '제목 검색' %>
+                </label>
+                <label class="pn-time-filter-field pn-time-filter-field--text">
+                    <span>작성자</span>
+                    <%= text_field_tag :patch_note_author, @patch_note_filter[:author], placeholder: '작성자 검색' %>
+                </label>
+                <label class="pn-time-filter-field">
+                    <span>기준</span>
+                    <%= select_tag :patch_note_time_field,
+                        options_for_select([['추가시각', 'created_at'], ['수정시각', 'updated_at']], @patch_note_filter[:field]) %>
+                </label>
+                <label class="pn-time-filter-field">
+                    <span>시작</span>
+                    <%= datetime_local_field_tag :patch_note_time_from, @patch_note_filter[:from_value] %>
+                </label>
+                <label class="pn-time-filter-field">
+                    <span>끝</span>
+                    <%= datetime_local_field_tag :patch_note_time_to, @patch_note_filter[:to_value] %>
+                </label>
+                <div class="pn-time-filter-actions">
+                    <%= submit_tag '필터 적용', name: nil, class: 'button button-positive' %>
+                    <%= link_to '초기화', "#{request.path}?#{reset_filter_params.to_query}", class: 'button' %>
+                </div>
+                <span class="pn-time-filter-count">노출 <%= total_notes %> / 전체 <%= @patch_note_unfiltered_count %></span>
+            </div>
+        <% end %>
 
         <% if @public_notes.empty? && @internal_notes.empty? %>
             <div class="pn-empty-state">
                 <span class="pn-empty-state-icon">&#128196;</span>
-                이 버전에 작성된 패치노트가 없습니다.
+                <%= @patch_note_unfiltered_count.to_i > 0 ? '선택한 필터 조건에 맞는 패치노트가 없습니다.' : '이 버전에 작성된 패치노트가 없습니다.' %>
             </div>
         <% end %>
 
@@ -96,12 +129,18 @@
                                 data-status="<%= note[:issue].status.name %>"
                                 data-priority="<%= note[:issue].priority.name %>"
                                 data-done-ratio="<%= note[:issue].done_ratio %>"
+                                data-author="<%= note[:author_name] %>"
+                                data-created-at="<%= format_time(note[:created_at]) %>"
+                                data-updated-at="<%= format_time(note[:updated_at]) %>"
                                 data-assignee="<%= worker_name %>">
                                 <div class="note-item-header">
                                     <span class="pn-tracker-badge" style="background-color: <%= tracker_color(note[:issue].tracker.name) %>;"><%= note[:issue].tracker.name %></span>
                                     <strong class="note-item-title">
                                         <%= note[:issue].subject %> <%= link_to "##{note[:issue].id}", issue_path(note[:issue]) %>
                                     </strong>
+                                    <span class="note-item-time-meta">
+                                        작성자 <%= note[:author_name] %> · 추가 <%= format_time(note[:created_at]) %> · 수정 <%= format_time(note[:updated_at]) %>
+                                    </span>
                                     <% if worker_name.present? %>
                                         <span class="pn-assignee-tag"><%= worker_name %></span>
                                     <% end %>
@@ -142,12 +181,18 @@
                                 data-status="<%= note[:issue].status.name %>"
                                 data-priority="<%= note[:issue].priority.name %>"
                                 data-done-ratio="<%= note[:issue].done_ratio %>"
+                                data-author="<%= note[:author_name] %>"
+                                data-created-at="<%= format_time(note[:created_at]) %>"
+                                data-updated-at="<%= format_time(note[:updated_at]) %>"
                                 data-assignee="<%= worker_name %>">
                                 <div class="note-item-header">
                                     <span class="pn-tracker-badge" style="background-color: <%= tracker_color(note[:issue].tracker.name) %>;"><%= note[:issue].tracker.name %></span>
                                     <strong class="note-item-title">
                                         <%= note[:issue].subject %> <%= link_to "##{note[:issue].id}", issue_path(note[:issue]) %>
                                     </strong>
+                                    <span class="note-item-time-meta">
+                                        작성자 <%= note[:author_name] %> · 추가 <%= format_time(note[:created_at]) %> · 수정 <%= format_time(note[:updated_at]) %>
+                                    </span>
                                     <% if worker_name.present? %>
                                         <span class="pn-assignee-tag"><%= worker_name %></span>
                                     <% end %>

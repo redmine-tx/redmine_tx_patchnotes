@@ -161,6 +161,61 @@
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
+/* Patch Note Filters */
+.pn-time-filter {
+  margin: 12px 0 16px;
+  padding: 8px 10px;
+  background: #f7f9fb;
+  border: 1px solid #d8dee6;
+  border-radius: 4px;
+}
+
+.pn-time-filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pn-time-filter-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  white-space: nowrap;
+  color: #555;
+  font-size: 0.9em;
+}
+
+.pn-time-filter-field span {
+  color: #666;
+  font-weight: bold;
+}
+
+.pn-time-filter-field input,
+.pn-time-filter-field select {
+  box-sizing: border-box;
+  height: 28px;
+  max-width: 190px;
+}
+
+.pn-time-filter-field--text input {
+  width: 150px;
+}
+
+.pn-time-filter-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pn-time-filter-count {
+  margin-left: auto;
+  color: #777;
+  font-size: 0.86em;
+  white-space: nowrap;
+}
+
 /* Section Headers */
 .pn-section-header--public { margin-top: 20px; margin-bottom: 15px; color: #1a73e8; border-bottom: 2px solid #1a73e8; padding-bottom: 8px; font-size: 1.15em; }
 .pn-section-header--internal { margin-top: 35px; margin-bottom: 15px; color: #d63; border-bottom: 2px solid #d63; padding-bottom: 8px; font-size: 1.15em; }
@@ -206,6 +261,13 @@
   color: #333;
 }
 .note-item-title a { color: #1a73e8; font-weight: normal; font-size: 0.9em; }
+
+.note-item-time-meta {
+  color: #888;
+  font-size: 0.78em;
+  font-weight: normal;
+  white-space: nowrap;
+}
 
 .pn-tracker-badge {
   display: inline-block;

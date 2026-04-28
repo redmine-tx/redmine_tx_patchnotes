@@ -13,6 +13,8 @@ class PatchnotesController < ApplicationController
       before_action :authorize
 
       def index
+        @patch_note_filter = build_patch_note_filter
+
         @versions = Version.where("effective_date IS NOT NULL").where("effective_date > ?", Date.today - 2.month).open.order(:effective_date).to_a
         if @project
             @versions = @versions.select { |v| v.project_id == @project.id }
@@ -37,9 +39,12 @@ class PatchnotesController < ApplicationController
         end
 
         cached.each { |k, v| instance_variable_set("@#{k}", v) }
+        apply_patch_note_filter!
       end
 
       private
+
+      PATCH_NOTE_TIME_FIELDS = %w[created_at updated_at].freeze
 
       def compute_cache_key
         version_id = @selected_version.id
@@ -100,7 +105,7 @@ class PatchnotesController < ApplicationController
 
         # DB에서 패치노트 조회
         issue_ids = issues.map(&:id)
-        db_notes_by_issue = PatchNote.where(issue_id: issue_ids).group_by(&:issue_id)
+        db_notes_by_issue = PatchNote.includes(:author).where(issue_id: issue_ids).group_by(&:issue_id)
 
         notes = []
         issues.each do |issue|
@@ -112,7 +117,15 @@ class PatchnotesController < ApplicationController
             end
 
             issue_notes.select { |pn| !pn.is_skipped }.each do |pn|
-                notes << { issue: issue, notes: pn.content, part: pn.part, is_internal: pn.is_internal }
+                notes << {
+                    issue: issue,
+                    notes: pn.content,
+                    part: pn.part,
+                    is_internal: pn.is_internal,
+                    author_name: pn.author.name,
+                    created_at: pn.created_at,
+                    updated_at: pn.updated_at
+                }
             end
         end
 
@@ -126,34 +139,20 @@ class PatchnotesController < ApplicationController
         issues_need_patch_notes = issues.select { |issue| !noted_issue_ids.include?(issue.id) && !config_complete_status.include?(issue.status_id) }
         issues_complete_without_patch_notes = issues.select { |issue| config_complete_status.include?(issue.status_id) && !noted_issue_ids.include?(issue.id) }
 
-        # 공개용과 내부용 패치노트 분류 (DB is_internal 필드 직접 사용)
-        public_notes = notes.reject { |n| n[:is_internal] }
-        internal_notes = notes.select { |n| n[:is_internal] }
-
         worker_ids = notes.map { |n| n[:issue].respond_to?(:worker_id) ? n[:issue].worker_id : nil }.compact.uniq
         worker_users_map = worker_ids.any? ? User.where(id: worker_ids).index_by(&:id) : {}
 
         tracker_order = Setting[:plugin_redmine_tx_patchnotes][:tracker_order].to_s.tr('[]" ','').split(',').map(&:to_i)
 
+        # 공개용과 내부용 패치노트 분류 (DB is_internal 필드 직접 사용)
+        public_notes = notes.reject { |n| n[:is_internal] }
+        internal_notes = notes.select { |n| n[:is_internal] }
+
         # 공개용 패치노트를 파트별로 그룹화
-        public_notes_by_part = public_notes.group_by { |note| note[:part] }.sort_by { |part, _| part }
-        public_notes_by_part.each do |_part, part_notes|
-            part_notes.sort_by! { |note|
-                tracker_id = note[:issue].tracker_id
-                order_index = tracker_order.index(tracker_id)
-                order_index.nil? ? 999 : order_index
-            }
-        end
+        public_notes_by_part = group_notes_by_part(public_notes, tracker_order)
 
         # 내부용 패치노트를 파트별로 그룹화
-        internal_notes_by_part = internal_notes.group_by { |note| note[:part] }.sort_by { |part, _| part }
-        internal_notes_by_part.each do |_part, part_notes|
-            part_notes.sort_by! { |note|
-                tracker_id = note[:issue].tracker_id
-                order_index = tracker_order.index(tracker_id)
-                order_index.nil? ? 999 : order_index
-            }
-        end
+        internal_notes_by_part = group_notes_by_part(internal_notes, tracker_order)
 
         {
             notes: notes,
@@ -180,6 +179,74 @@ class PatchnotesController < ApplicationController
 
       def authorize
         raise Unauthorized unless User.current.allowed_to?(:view_patchnotes, @project)
+      end
+
+      def build_patch_note_filter
+        now = Time.zone.now
+        default_from = Time.zone.local(1970, 1, 1, 0, 0, 0)
+        field = PATCH_NOTE_TIME_FIELDS.include?(params[:patch_note_time_field].to_s) ? params[:patch_note_time_field].to_s : 'created_at'
+        from_time = parse_patch_note_time(params[:patch_note_time_from], default_from)
+        to_time = parse_patch_note_time(params[:patch_note_time_to], now, end_of_minute: params[:patch_note_time_to].present?)
+
+        {
+            field: field,
+            from: from_time,
+            to: to_time,
+            from_value: format_datetime_local(from_time),
+            to_value: format_datetime_local(to_time),
+            title: params[:patch_note_title].to_s.strip,
+            author: params[:patch_note_author].to_s.strip
+        }
+      end
+
+      def parse_patch_note_time(value, fallback, end_of_minute: false)
+        return fallback if value.blank?
+
+        parsed = Time.zone.parse(value.to_s) || fallback
+        end_of_minute ? parsed + 59.seconds : parsed
+      rescue ArgumentError
+        fallback
+      end
+
+      def format_datetime_local(time)
+        time.strftime('%Y-%m-%dT%H:%M')
+      end
+
+      def apply_patch_note_filter!
+        @patch_note_unfiltered_count = @notes.count
+        field = @patch_note_filter[:field].to_sym
+        from_time = @patch_note_filter[:from]
+        to_time = @patch_note_filter[:to]
+        title_filter = @patch_note_filter[:title].to_s.downcase
+        author_filter = @patch_note_filter[:author].to_s.downcase
+
+        @notes = @notes.select do |note|
+            time = note[field]
+            title = note[:issue].subject.to_s.downcase
+            author = note[:author_name].to_s.downcase
+            time.present? &&
+                time >= from_time &&
+                time <= to_time &&
+                (title_filter.blank? || title.include?(title_filter)) &&
+                (author_filter.blank? || author.include?(author_filter))
+        end
+
+        tracker_order = Setting[:plugin_redmine_tx_patchnotes][:tracker_order].to_s.tr('[]" ','').split(',').map(&:to_i)
+        @public_notes = @notes.reject { |n| n[:is_internal] }
+        @internal_notes = @notes.select { |n| n[:is_internal] }
+        @public_notes_by_part = group_notes_by_part(@public_notes, tracker_order)
+        @internal_notes_by_part = group_notes_by_part(@internal_notes, tracker_order)
+        @notes_by_part = @public_notes_by_part
+      end
+
+      def group_notes_by_part(notes, tracker_order)
+        notes.group_by { |note| note[:part] }.sort_by { |part, _| part }.each do |_part, part_notes|
+            part_notes.sort_by! do |note|
+                tracker_id = note[:issue].tracker_id
+                order_index = tracker_order.index(tracker_id)
+                order_index.nil? ? 999 : order_index
+            end
+        end
       end
 
     end
